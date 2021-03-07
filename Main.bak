@@ -1,0 +1,52 @@
+#lang racket
+; M-integer maps expressions to integer values
+; (M-integer '(3 + 5)) = 8
+; (M-integer '(6 - 4)) = 2
+; (M-integer '(4 * 7)) = 28
+; (M-integer '(9 / 3)) = 3
+; (M-integer '(8 / 3)) = 2
+; (M-integer '((2 + 2) * (5 - 3))) = 8
+; operators: +, -, *, /, %
+(define M-integer1
+  (lambda (expression)
+    (cond
+      [(number? expression) expression]
+      [(eq? (car (cdr expression)) '+) (+ (M-integer1 (car expression)) (M-integer1 (car (cdr (cdr expression)))))]
+      [(eq? (car (cdr expression)) '-) (- (M-integer1 (car expression)) (M-integer1 (car (cdr (cdr expression)))))]
+      [(eq? (car (cdr expression)) '*) (* (M-integer1 (car expression)) (M-integer1 (car (cdr (cdr expression)))))]
+      [(eq? (car (cdr expression)) '/) (quotient (M-integer1 (car expression)) (M-integer1 (car (cdr (cdr expression)))))]
+      [(eq? (car (cdr expression)) '%) (modulo (M-integer1 (car expression)) (M-integer1 (car (cdr (cdr expression)))))]
+      [else (error 'bad-operator)])))
+
+; M-integer maps expressions to integer values
+; (M-integer '(+ 3 5)) = 8
+; (M-integer '(- 6 4)) = 2
+; (M-integer '(* 4 7)) = 28
+; (M-integer '(/ 9 3)) = 3
+; (M-integer '(/ 8 3)) = 2
+; (M-integer '(* (+ 2 5) (- 5 3))) = 8
+; operators: +, -, *, /, %
+(define M-integer
+  (lambda (expression)
+    (cond
+      [(number? expression) expression]
+      [(eq? (car expression) '+) (+ (M-integer (car (cdr expression))) (M-integer (car (cdr (cdr expression)))))]
+      [(eq? (car expression) '-) (- (M-integer (car (cdr expression))) (M-integer (car (cdr (cdr expression)))))]
+      [(eq? (car expression) '*) (* (M-integer (car (cdr expression))) (M-integer (car (cdr (cdr expression)))))]
+      [(eq? (car expression) '/) (quotient (M-integer (car (cdr expression))) (M-integer (car (cdr (cdr expression)))))]
+      [(eq? (car expression) '%) (modulo (M-integer (car (cdr expression))) (M-integer (car (cdr (cdr expression)))))]
+      [else (error 'bad-operator)])))
+; replace (car expression) with (operator expression)
+; replace (car (cdr expression)) with (leftoperand expression)
+; replace (car (cdr (cdr expression))) with (rightoperand expression)
+(M-integer '(+ 3 5))
+(M-integer '(- 6 4))
+(M-integer '(* 4 7))
+(M-integer '(/ 9 3))
+(M-integer '(/ 8 3))
+(M-integer '(* (+ 2 5) (- 5 3)))
+
+; ABSTRACTION
+(define operator (lambda (expression) (caddr expression)))
+(define leftoperand cadr)
+(define rightoperand caddr)

@@ -22,7 +22,7 @@
 (define M-compare
   (lambda (expression)
     (cond
-      [(number? expression) expression]
+      [(boolean? expression) expression]
       [(eq? (operator expression) '<) (< (M-compare (leftoperand expression)) (M-compare (rightoperand expression)))]
       [(eq? (operator expression) '<=) (<= (M-compare (leftoperand expression)) (M-compare (rightoperand expression)))]
       [(eq? (operator expression) '>) (<= (M-compare (leftoperand expression)) (M-compare (rightoperand expression)))]
@@ -33,6 +33,11 @@
 
 ; M-bool maps boolean expressions to boolean values
 ; operators: &&, ||, !.
-
-(M-integer '((5 - 3) *(9 / 3)))
-(M-compare '(5 < 3))
+(define M-bool
+  (lambda (expression)
+    (cond
+      [(number? expression) expression]
+      [(eq? (operator expression) '&&) (and (M-bool (leftoperand expression)) (M-bool (rightoperand expression)))]
+      [(eq? (operator expression) '||) (or (M-bool (leftoperand expression)) (M-bool (rightoperand expression)))]
+      [(eq? (operator expression) '!) (not (M-bool (leftoperand expression)) (M-bool (rightoperand expression)))]
+      [else (error 'bad-operator)])))

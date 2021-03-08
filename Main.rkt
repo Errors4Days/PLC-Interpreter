@@ -1,6 +1,7 @@
 #lang racket
 ; Elizabeth Shumaker and Justin Lee
 
+
 (require "simpleParser.rkt")
 ; Abstraction and helpers
 (define operator car)
@@ -42,6 +43,7 @@
       [(number? val) val]
       [(member*? val vars)(getValue val vars)]
       [else val])))
+
 
 
 ; M-integer maps expressions to integer values

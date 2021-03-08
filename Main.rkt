@@ -14,6 +14,27 @@
       [(pair? (car lis)) (or (member*? a (car lis)) (member*? a (cdr lis)))]
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
+; Finds a subarray and replaces it (replace '(z) '((a 4) (d 3223) (z 3)))
+(define replace
+  (lambda (og new lis)
+    (cond
+      [(null? lis) (cons new '())]
+      [(member*? og (car lis)) (cons new (cdr lis))]
+      [else (cons (car lis) (replace og new (cdr lis)))])))
+; Same as replace but throws an error if the variable can't be found
+(define insert
+  (lambda (og new lis)
+    (cond
+      [(null? lis) (error 'variable-not-declared)]
+      [(member*? og (car lis)) (cons (append (cons og '()) (cons new '())) (cdr lis))]
+      [else (cons (car lis) (insert og new (cdr lis)))])))
+; Get variable value
+(define getValue
+  (lambda (varName lis)
+    (cond
+      [(null? lis) (error 'variable-not-declared)]
+      [(member*? varName (car lis)) (cadr (car lis))]
+      [else (getValue varName (cdr lis))])))
 
 
 ; M-integer maps expressions to integer values
@@ -56,12 +77,32 @@
       [(and (eq? (operator expression) '!) (boolean? (leftoperand expression))) (not (M-bool (leftoperand expression)))]
       [else (error 'bad-operator)])))
 
-; I don't think this is actually assigning variable values
-(define M-assign
-  (lambda (var-name value)
+; Variable declaration
+; '(var x) or '(var x (expression))
+(define M-declare
+  (lambda (expression vars)
     (cond
-      [(number? value) value]
-      [else (M-assign var-name (M-integer value))])))
+      [(not (null? (cddr expression))) (M-assign (cons '= (cons (cadr expression) (cons (M-evaluate (caddr expression))'())))
+                                                                (M-declare (cons 'var (cons (cadr expression) '())) vars))] ;Abstract
+      [(member*? (leftoperand expression) vars) vars] ;remove old variable
+      [else (cons (cons (leftoperand expression) '()) vars)])))
+
+; Maps variables with values
+; '(= x value/expression)
+(define M-assign
+  (lambda (expression vars)
+    (insert (cadr expression) (M-evaluate(car (cddr expression))) vars)))
+
+; if statements
+(define M-if
+  (lambda (expression)
+    (cond
+      [(and (eq? (caar expression) 'if) (M-compare (cdr (car expression)))) ;M-compare currently doesn't work for this
+       (M-if (cddr expression))]
+      [(eq? (car expression) 'if) (M-if (cddr expression))]
+      [((eq? (car (operator expression)) 'return)) (M-return (getExpression expression))]
+      ;[] ;this is for assignment
+      [else (error 'invalid expression)])))
 
 ; Passes the expression into the correct function for evaluation
 (define M-evaluate
@@ -73,28 +114,26 @@
       [(member*? (operator expression) '( && || !)) (M-bool expression)]
       [else (error 'no-valid-operator)])))
 
-
+; Returns a value or boolean
 (define M-return
-  (lambda (expression)
+  (lambda (expression vars)
     (cond
       [(list? expression) (M-evaluate expression)]
       [(number? expression) expression]
       [(eq? expression #t) 'true]
-      [(eq? expression #f) 'false])))
+      [(eq? expression #f) 'false]
+      [else (getValue expression vars)])))
 
 
 (define M-state
   (lambda (expression vars)
     (cond
-      [(eq? (car (operator expression)) 'return) (M-return (getExpression expression))])))
-
+      [(eq? (operator (car expression)) 'return) (M-return (getExpression expression) vars)]
+      [(eq? (operator (car expression)) 'var) (M-state (cdr expression) (M-declare (car expression) vars))]
+      [(eq? (operator (car expression)) '=) (M-state (cdr expression) (M-assign (car expression) vars))])))
 
 (define M-state-start
   (lambda (expression)
     (M-state expression '())))
-
-; if, while
-; declaration
-; assign
 
 (parser "Code.txt")

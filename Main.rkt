@@ -58,7 +58,8 @@
                                          (M-integer (int_val(rightoperand expression) vars)vars))]
       [(eq? (operator expression) '*) (* (M-integer (int_val(leftoperand expression)vars)vars)
                                          (M-integer (int_val(rightoperand expression)vars)vars))]
-      [(eq? (operator expression) '/) (quotient (M-integer (int_val(leftoperand expression)vars)vars))]
+      [(eq? (operator expression) '/) (quotient (M-integer (int_val(leftoperand expression)vars)vars)
+                                                (M-integer (int_val(rightoperand expression)vars)vars))]
       [(eq? (operator expression) '%) (modulo (M-integer (int_val(leftoperand expression)vars)vars)
                                               (M-integer (int_val(rightoperand expression)vars)vars))]
       [else (error 'bad-operator)])))
@@ -89,9 +90,9 @@
   (lambda (expression vars)
     (cond
       [(boolean? expression) expression]
-      [(not (list? expression)) (getValue expression vars)]
       [(eq? expression 'true) #t]
       [(eq? expression 'false) #f]
+      [(and (not (list? expression)) (boolean? (getValue expression vars))) (getValue expression vars)]
       [(and (eq? (operator expression) '!) (boolean? (M-evaluate (leftoperand expression) vars))) (not (M-bool (leftoperand expression) vars))]
       [(not (boolean? (M-evaluate (leftoperand expression) vars))) (error 'input-not-boolean)]
       [(not (boolean? (M-evaluate (rightoperand expression) vars))) (error 'input-not-boolean)]
@@ -133,6 +134,7 @@
 (define M-evaluate
   (lambda (expression vars)
     (cond
+      [(or (eq? expression 'false) (eq? expression 'true)) (M-bool expression vars)]
       [(not (list? expression)) (int_val expression vars)]
       [(member*? (operator expression) '(+ - * / %)) (M-integer expression vars)]
       [(member*? (operator expression) '(== != < > <= >=)) (M-compare expression vars)]

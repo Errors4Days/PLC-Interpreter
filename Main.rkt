@@ -158,11 +158,11 @@
 (define M-return
   (lambda (expression vars)
     (cond
-      [(list? expression) (M-evaluate expression vars)] ; Expression hasn't been evaluated
+      [(list? expression) (M-return (M-evaluate expression vars) vars)] ; Expression hasn't been evaluated
       [(number? expression) expression] ; Given a number
       [(eq? expression #t) 'true] ; Given a boolean
       [(eq? expression #f) 'false] ; Given a boolean
-      [else (getValue expression vars)]))) ; Given a variable
+      [else (M-return (getValue expression vars) vars)]))) ; Given a variable
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
@@ -180,5 +180,25 @@
   (lambda (expression)
     (M-state expression '())))
 
-(parser "Code.txt")
-(M-state-start (parser "Tests/Test1.txt"))
+;Provided Test Cases
+;#|
+(M-state-start (parser "Tests/Test1"))
+(M-state-start (parser "Tests/Test2"))
+(M-state-start (parser "Tests/Test3"))
+(M-state-start (parser "Tests/Test4"))
+(M-state-start (parser "Tests/Test5"))
+(M-state-start (parser "Tests/Test6"))
+(M-state-start (parser "Tests/Test7"))
+(M-state-start (parser "Tests/Test8"))
+(M-state-start (parser "Tests/Test9"))
+(M-state-start (parser "Tests/Test10"))
+;(M-state-start (parser "Tests/Test11")) ;Throws Expected Error
+;(M-state-start (parser "Tests/Test12")) ; wrong error
+;(M-state-start (parser "Tests/Test13")) ; wrong error
+;(M-state-start (parser "Tests/Test14")) ; Throws expected error
+(M-state-start (parser "Tests/Test15"))
+(M-state-start (parser "Tests/Test16")) 
+(M-state-start (parser "Tests/Test17"))
+(M-state-start (parser "Tests/Test18"))
+(M-state-start (parser "Tests/Test19"))
+(M-state-start (parser "Tests/Test20")) ;|#

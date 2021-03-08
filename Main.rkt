@@ -179,4 +179,4 @@
     (M-state expression '())))
 
 (parser "Code.txt")
-(M-state-start (parser "Code.txt"))
+(M-state-start (parser "Tests/Test1.txt"))

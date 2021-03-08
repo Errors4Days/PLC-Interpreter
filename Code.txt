@@ -1,8 +1,13 @@
-var x = 10;
-var y = 20;
-var z = 20 >= 10;
-if (!z || false)
-  z = !z;
+var x;
+x = 10;
+var y = 3 * x + 5;
+while (y % x != 3)
+  y = y + 1;
+if (x > y)
+  return x;
+else if (x * x > y)
+  return x * x;
+else if (x * (x + x) > y)
+  return x * (x + x);
 else
-  z = z;
-return z;
+  return y - 1;

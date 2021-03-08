@@ -3,7 +3,7 @@
 
 
 (require "simpleParser.rkt")
-; Abstraction and helpers
+; ABSTRACTION/HELPERS
 (define operator car)
 (define leftoperand cadr)
 (define rightoperand caddr)
@@ -132,6 +132,17 @@
       [(eq? (operator expression) '=) (M-state next (M-assign expression vars))] ;to assign values
       [else (error 'invalid-if-statement)])))
 
+; while statements
+(define M-while
+  (lambda (expression next vars)
+    (cond
+      [(and (eq? (car expression) 'while) (M-evaluate (cadr expression) vars))
+       (M-while expression next (M-while (caddr expression) next vars))] ; Enter loop, run body
+      [(eq? (car expression) 'while) (M-state next vars)] ; Exit loop
+      [(eq? (operator expression) '=) (M-assign expression vars)] ; Run body with assignment
+      [else (error 'invalid-while-loop)]))) ; Error
+      
+
 ; Passes the expression into the correct function for evaluation
 (define M-evaluate
   (lambda (expression vars)
@@ -153,7 +164,6 @@
       [(eq? expression #f) 'false]
       [else (getValue expression vars)])))
 
-
 (define M-state
   (lambda (expression vars)
     (cond
@@ -161,7 +171,8 @@
       [(eq? (operator (car expression)) 'return) (M-return (getExpression expression) vars)]
       [(eq? (operator (car expression)) 'var) (M-state (cdr expression) (M-declare (car expression) vars))]
       [(eq? (operator (car expression)) '=) (M-state (cdr expression) (M-assign (car expression) vars))]
-      [(eq? (operator (car expression)) 'if) (M-if (car expression) (cdr expression) vars)])))
+      [(eq? (operator (car expression)) 'if) (M-if (car expression) (cdr expression) vars)]
+      [(eq? (operator (car expression)) 'while) (M-while (car expression) (cdr expression) vars)])))
 
 (define M-state-start
   (lambda (expression)

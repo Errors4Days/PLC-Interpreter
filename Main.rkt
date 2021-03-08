@@ -3,7 +3,7 @@
 
 
 (require "simpleParser.rkt")
-; ABSTRACTION/HELPERS
+;;; ABSTRACTION/HELPERS
 (define operator car)
 (define leftoperand cadr)
 (define rightoperand caddr)
@@ -28,6 +28,7 @@
   (lambda (varName lis)
     (cond
       [(null? lis) (error 'variable-not-declared)]
+      [(and (member*? varName (car lis)) (null? (cdr lis))) (error 'variable-not-assigned)]
       [(member*? varName (car lis)) (cadr (car lis))]
       [else (getValue varName (cdr lis))])))
 ; Takes in variable or value and returns a value
@@ -43,6 +44,7 @@
     (cons a (cons b '()))))
 
 
+;;; Main state operators
 ; M-integer maps expressions to integer values
 ; operators: +, -, *, /, %
 (define M-integer
@@ -158,7 +160,7 @@
 (define M-return
   (lambda (expression vars)
     (cond
-      [(list? expression) (M-evaluate expression vars)] ; Expression hasn't been evaluated
+      [(list? expression) (M-return (M-evaluate expression vars) vars)] ; Expression hasn't been evaluated
       [(number? expression) expression] ; Given a number
       [(eq? expression #t) 'true] ; Given a boolean
       [(eq? expression #f) 'false] ; Given a boolean
@@ -181,4 +183,4 @@
     (M-state expression '())))
 
 (parser "Code.txt")
-(M-state-start (parser "Tests/Test1.txt"))
+(M-state-start (parser "Code.txt"))

@@ -28,7 +28,7 @@
   (lambda (varName lis)
     (cond
       [(null? lis) (error 'variable-not-declared)]
-      [(and (member*? varName (car lis)) (null? (cdr lis))) (error 'variable-not-assigned)]
+      [(and (member*? varName (car lis)) (null? (cdar lis))) (error 'variable-not-assigned)]
       [(member*? varName (car lis)) (cadr (car lis))]
       [else (getValue varName (cdr lis))])))
 ; Takes in variable or value and returns a value
@@ -183,8 +183,6 @@
     (M-state expression '())))
 
 
-(parser "Code.txt")
-=======
 ;Provided Test Cases
 ;#|
 (M-state-start (parser "Tests/Test1"))
@@ -197,14 +195,14 @@
 (M-state-start (parser "Tests/Test8"))
 (M-state-start (parser "Tests/Test9"))
 (M-state-start (parser "Tests/Test10"))
-;(M-state-start (parser "Tests/Test11")) ;Throws Expected Error
+; M-state-start (parser "Tests/Test11")) ;Throws Expected Error
 ;(M-state-start (parser "Tests/Test12")) ; wrong error
 ;(M-state-start (parser "Tests/Test13")) ; wrong error
 ;(M-state-start (parser "Tests/Test14")) ; Throws expected error
-(M-state-start (parser "Tests/Test15"))
-(M-state-start (parser "Tests/Test16")) 
-(M-state-start (parser "Tests/Test17"))
-(M-state-start (parser "Tests/Test18"))
-(M-state-start (parser "Tests/Test19"))
-(M-state-start (parser "Tests/Test20")) ;|#
+;(M-state-start (parser "Tests/Test15"))
+;(M-state-start (parser "Tests/Test16")) 
+;(M-state-start (parser "Tests/Test17"))
+;(M-state-start (parser "Tests/Test18"))
+;(M-state-start (parser "Tests/Test19"))
+;(M-state-start (parser "Tests/Test20")) ;|#
 

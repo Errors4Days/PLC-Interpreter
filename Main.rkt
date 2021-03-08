@@ -149,7 +149,9 @@
   (lambda (expression vars)
     (cond
       [(or (eq? expression 'false) (eq? expression 'true)) (M-bool expression vars)] ; Given a single boolean
-      [(not (list? expression)) (int_val expression vars)] ; Given an atom that is a variable or value
+      [(and (not (list? expression)) (number? expression)) expression]
+      [(and (not (list? expression)) (boolean? expression)) expression]
+      [(not (list? expression)) (getValue expression vars)] ; Given an atom that is a variable or value
       [(member*? (operator expression) '(+ - * / %)) (M-integer expression vars)] ; Math expression
       [(member*? (operator expression) '(== != < > <= >=)) (M-compare expression vars)] ; Comparison expression
       [(member*? (operator expression) '( && || !)) (M-bool expression vars)] ; Boolean expression
@@ -184,7 +186,7 @@
 
 
 ;Provided Test Cases
-;#|
+#|
 (M-state-start (parser "Tests/Test1"))
 (M-state-start (parser "Tests/Test2"))
 (M-state-start (parser "Tests/Test3"))
@@ -194,15 +196,18 @@
 (M-state-start (parser "Tests/Test7"))
 (M-state-start (parser "Tests/Test8"))
 (M-state-start (parser "Tests/Test9"))
-(M-state-start (parser "Tests/Test10"))
-; M-state-start (parser "Tests/Test11")) ;Throws Expected Error
-;(M-state-start (parser "Tests/Test12")) ; wrong error
-;(M-state-start (parser "Tests/Test13")) ; wrong error
-;(M-state-start (parser "Tests/Test14")) ; Throws expected error
-;(M-state-start (parser "Tests/Test15"))
-;(M-state-start (parser "Tests/Test16")) 
-;(M-state-start (parser "Tests/Test17"))
-;(M-state-start (parser "Tests/Test18"))
-;(M-state-start (parser "Tests/Test19"))
-;(M-state-start (parser "Tests/Test20")) ;|#
+(M-state-start (parser "Tests/Test10")) |#
+
+;(M-state-start (parser "Tests/Test11")) ; error using before declaring
+; (M-state-start (parser "Tests/Test12")) ; error variable not declared
+; (M-state-start (parser "Tests/Test13")) ; error using before assigning
+; (M-state-start (parser "Tests/Test14")) ; error redefining variable
+
+#|
+(M-state-start (parser "Tests/Test15"))
+(M-state-start (parser "Tests/Test16")) 
+(M-state-start (parser "Tests/Test17"))
+(M-state-start (parser "Tests/Test18"))
+(M-state-start (parser "Tests/Test19"))
+(M-state-start (parser "Tests/Test20")) |#
 

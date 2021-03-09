@@ -1,0 +1,9 @@
+var x;
+var z;
+x = 5;
+z = 7;
+if(x < z)
+    var y = 100;
+else
+    x = 0;
+return y;

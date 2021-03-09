@@ -44,7 +44,7 @@
     (cons a (cons b '()))))
 
 
-;;; Main state operators
+;;; MAIN OPERATORS
 ; M-integer maps expressions to integer values
 ; operators: +, -, *, /, %
 (define M-integer
@@ -109,10 +109,11 @@
 (define M-declare
   (lambda (expression vars)
     (cond
-      [(not (null? (cddr expression))) (M-assign (cons '= (listMaker (leftoperand expression) (M-evaluate (rightoperand expression) vars)))
-                                                                (M-declare (listMaker 'var (leftoperand expression)) vars))] ; Declaration with an assignment
-      [(member*? (leftoperand expression) vars) (error 'redefining-variable)] ; 
-      [else (cons (cons (leftoperand expression) '()) vars)])))
+      [(not (null? (cddr expression)))
+       (M-assign (cons '= (listMaker (leftoperand expression)(M-evaluate (rightoperand expression) vars)))
+                 (M-declare (listMaker 'var (leftoperand expression)) vars))] ; Declaration with an assignment
+      [(member*? (leftoperand expression) vars) (error 'redefining-variable)]
+      [else (cons (cons (leftoperand expression) '()) vars)]))) ; 
 
 ; Maps variables with values
 ; '(= x value/expression)
@@ -125,7 +126,8 @@
 (define M-if
   (lambda (expression next vars)
     (cond
-      [(and (eq? (operator expression) 'if) (M-evaluate (leftoperand expression) vars)) (M-if (rightoperand expression) next vars)] ; if condition is true, run body
+      [(and (eq? (operator expression) 'if) (M-evaluate (leftoperand expression) vars))
+       (M-if (rightoperand expression) next vars)] ; if condition is true, run body
       [(and (eq? (operator expression) 'if) (null? (cdddr expression))) (M-state next vars)] ; No else statement
       [(eq? (operator expression) 'if) (M-if (cadddr expression) next vars)] ;Run else/ else if
       [(eq? (operator expression) 'return) (M-return (cadr expression) vars)] ; Finds and runs return function

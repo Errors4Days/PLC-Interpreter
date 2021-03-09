@@ -200,8 +200,8 @@
     (cond
       [(list? expression) (M-return (M-evaluate expression vars) vars)] ; Expression not evaluated
       [(number? expression) expression] ; Given a number
-      [(eq? expression #t) 'true] ; Given a boolean
-      [(eq? expression #f) 'false] ; Given a boolean
+      [(or (eq? expression #t) (eq? expression 'true)) 'true] ; Given a boolean
+      [(or (eq? expression #f) (eq? expression 'false)) 'false] ; Given a boolean
       [else (M-return (getValue expression vars) vars)]))) ; Given a variable
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
@@ -257,12 +257,13 @@
 (interpret "Tests/Test19")
 (interpret "Tests/Test20")|#
 
-(interpret "Tests/Test30") ; 82
-(interpret "Tests/Test31") ; 100
-;(interpret "Tests/Test32") ; true
-(interpret "Tests/Test33") ; false
-(interpret "Tests/Test34") ; 107
-(interpret "Tests/Test35") ; 0
-;(interpret "Tests/Test36") ;error undeclared variable
-;(interpret "Tests/Test37") ; error invalid if statement
-(interpret "Tests/Test38") ; 100
+;;; SELF MADE TEST CASES
+(interpret "Tests/Test30")     ;output should be 82
+(interpret "Tests/Test31")     ;output should be 100
+(interpret "Tests/Test32")     ;output should be 'true
+(interpret "Tests/Test33")     ;output should be 'false
+(interpret "Tests/Test34")     ;output should be 107
+(interpret "Tests/Test35")     ;output should be 0
+; (interpret "Tests/Test36")    ;throws error undeclared
+; (interpret "Tests/Test37")    ;throws error invalid if
+(interpret "Tests/Test38")     ;output should be 100

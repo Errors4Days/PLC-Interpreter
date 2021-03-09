@@ -17,6 +17,15 @@
 (define nextExecute car)
 (define remainderExpression cdr)
 
+;combines int_val and leftoperand because it's frequency
+(define left_val
+  (lambda (val vars)
+    (int_val (leftoperand val) vars)))
+;combines int_val and rightoperand because it's frequency
+(define right_val
+  (lambda (val vars)
+    (int_val (rightoperand val) vars)))
+
 (define member*?
   (lambda (a lis)
     (cond
@@ -65,17 +74,17 @@
     (cond
       [(number? expression) expression]
       [(and (null? (lastTriple expression)) (eq? (operator expression) '-))
-       (- 0 (M-integer (int_val(leftoperand expression) vars)vars))]
-      [(eq? (operator expression) '+) (+ (M-integer (int_val(leftoperand expression) vars)vars)
-                                         (M-integer (int_val(rightoperand expression)vars)vars))]
-      [(eq? (operator expression) '-) (- (M-integer (int_val(leftoperand expression) vars)vars)
-                                         (M-integer (int_val(rightoperand expression) vars)vars))]
-      [(eq? (operator expression) '*) (* (M-integer (int_val(leftoperand expression)vars)vars)
-                                         (M-integer (int_val(rightoperand expression)vars)vars))]
-      [(eq? (operator expression) '/) (quotient (M-integer (int_val(leftoperand expression)vars)vars)
-                                                (M-integer (int_val(rightoperand expression)vars)vars))]
-      [(eq? (operator expression) '%) (modulo (M-integer (int_val(leftoperand expression)vars)vars)
-                                              (M-integer (int_val(rightoperand expression)vars)vars))]
+       (- 0 (M-integer (left_val expression vars) vars))]
+      [(eq? (operator expression) '+) (+ (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '-) (- (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '*) (* (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '/) (quotient (M-integer (left_val expression vars) vars)
+                                                (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '%) (modulo (M-integer (left_val expression vars) vars)
+                                              (M-integer (right_val expression vars) vars))]
       [else (error 'bad-math-operator)])))
 
 ; M-compare maps comparisons to boolean values
@@ -84,18 +93,18 @@
   (lambda (expression vars)
     (cond
       [(boolean? expression) expression]
-      [(eq? (operator expression) '<) (< (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                         (M-evaluate (int_val(rightoperand expression)vars) vars))]
-      [(eq? (operator expression) '<=) (<= (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                           (M-evaluate (int_val(rightoperand expression)vars) vars))]
-      [(eq? (operator expression) '>) (> (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                          (M-evaluate (int_val(rightoperand expression)vars) vars))]
-      [(eq? (operator expression) '>=) (>= (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                           (M-evaluate (int_val(rightoperand expression)vars) vars))]
-      [(eq? (operator expression) '==) (eq? (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                           (M-evaluate (int_val(rightoperand expression)vars) vars))]
-      [(eq? (operator expression) '!=) (not (eq? (M-evaluate (int_val(leftoperand expression)vars) vars)
-                                           (M-evaluate (int_val(rightoperand expression)vars) vars)))]
+      [(eq? (operator expression) '<) (< (M-evaluate (left_val expression vars) vars)
+                                         (M-evaluate (right_val expression vars) vars))]
+      [(eq? (operator expression) '<=) (<= (M-evaluate (left_val expression vars) vars)
+                                           (M-evaluate (right_val expression vars) vars))]
+      [(eq? (operator expression) '>) (> (M-evaluate (left_val expression vars) vars)
+                                          (M-evaluate (right_val expression vars) vars))]
+      [(eq? (operator expression) '>=) (>= (M-evaluate (left_val expression vars) vars)
+                                           (M-evaluate (right_val expression vars) vars))]
+      [(eq? (operator expression) '==) (eq? (M-evaluate (left_val expression vars) vars)
+                                           (M-evaluate (right_val expression vars) vars))]
+      [(eq? (operator expression) '!=) (not (eq? (M-evaluate (left_val expression vars) vars)
+                                                 (M-evaluate (right_val expression vars) vars)))]
       [else (error 'bad-compare-operator)])))
 
 ; M-bool maps boolean expressions to boolean values and converts strings to booleans
@@ -104,23 +113,23 @@
   (lambda (expression vars)
     (cond
       [(boolean? expression) expression] ; if already boolean, return boolean
-      [(eq? expression 'true) #t] ; if true, return #t
-      [(eq? expression 'false) #f] ; if false, return #f
-      [(and (not (list? expression)) (boolean? (getValue expression vars))) (getValue expression vars)]
-                                     ; if variable and variable is boolean, return boolean
+      [(eq? expression 'true) #t]        ; if true, return #t
+      [(eq? expression 'false) #f]       ; if false, return #f
+      [(and (not (list? expression)) (boolean? (getValue expression vars)))
+       (getValue expression vars)]       ; if variable and variable is boolean, return boolean
+      ; if ! statement and boolean value, return opposite
       [(and (eq? (operator expression) '!) (boolean? (M-evaluate (leftoperand expression) vars)))
                                            (not (M-bool (leftoperand expression) vars))]
-                                     ; if ! statement and boolean value, return opposite
-      [(not (boolean? (M-evaluate (leftoperand expression) vars))) (error 'input-not-boolean)]
-                                     ; if leftoperand not boolean, error
-      [(not (boolean? (M-evaluate (rightoperand expression) vars))) (error 'input-not-boolean)]
-                                     ; if rightoperand not boolean, error
+      [(not (boolean? (M-evaluate (leftoperand expression) vars)))
+       (error 'input-not-boolean)]       ; if leftoperand not boolean, error
+      [(not (boolean? (M-evaluate (rightoperand expression) vars)))
+       (error 'input-not-boolean)]       ; if rightoperand not boolean, error
+      ; if &&, return (and leftoperand rightoperand)
       [(eq? (operator expression) '&&) (and (M-evaluate (leftoperand expression) vars)
                                             (M-evaluate (rightoperand expression) vars))]
-                                           ; if &&, return (and leftoperand rightoperand)
+      ; if ||, return (or leftoperand rightoperand)
       [(eq? (operator expression) '||) (or (M-evaluate (leftoperand expression) vars)
                                            (M-evaluate (rightoperand expression) vars))]
-                                           ; if ||, return (or leftoperand rightoperand)
       [else (error 'bad-boolean-operator)])))
 
 ; Variable declaration
@@ -129,12 +138,13 @@
   (lambda (expression vars)
     (cond
       [(not (null? (cddr expression)))
-       (M-assign (cons '= (listMaker (leftoperand expression)(M-evaluate (rightoperand expression) vars)))
+       (M-assign (cons '= (listMaker (leftoperand expression)
+                                     (M-evaluate (rightoperand expression) vars)))
+                 ; Declaration with an assignment
                  (M-declare (listMaker 'var (leftoperand expression)) vars))]
-                                             ; Declaration with an assignment
       [(member*? (leftoperand expression) vars) (error 'redefining-variable)]
+      ; Standard declaration
       [else (cons (cons (leftoperand expression) '()) vars)])))
-                                         ; Standard declaration
 
 ; Maps variables with values
 ; '(= x value/expression)
@@ -149,14 +159,14 @@
     (cond
       [(and (eq? (operator expression) 'if) (M-evaluate (leftoperand expression) vars))
        (M-if (rightoperand expression) next vars)] ; if condition is true, run body
-      [(and (eq? (operator expression) 'if) (null? (lastQuadruple expression))) (M-state next vars)]
-                                                                         ; No else statement
-      [(eq? (operator expression) 'if) (M-if (cadddr expression) next vars)]
-                                                         ; Run else/ else if
-      [(eq? (operator expression) 'return) (M-return (cadr expression) vars)]
-                                             ; Finds and runs return function
-      [(eq? (operator expression) '=) (M-state next (M-assign expression vars))]
-                                           ; Executes variable assignment values
+      [(and (eq? (operator expression) 'if) (null? (lastQuadruple expression)))
+       (M-state next vars)]                        ; No else statement
+      [(eq? (operator expression) 'if)
+       (M-if (cadddr expression) next vars)]       ; Run else/ else if
+      [(eq? (operator expression) 'return)
+       (M-return (cadr expression) vars)]          ; Finds and runs return function
+      [(eq? (operator expression) '=)
+       (M-state next (M-assign expression vars))]  ; Executes variable assignment values
       [else (error 'invalid-if-statement)])))
 
 ; while statements
@@ -166,7 +176,7 @@
     (cond
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (M-while expression next (M-while (rightoperand expression) next vars))] ; Enter loop, run body
-      [(eq? (operator expression) 'while) (M-state next vars)] ; Exit loop
+      [(eq? (operator expression) 'while) (M-state next vars)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))
       

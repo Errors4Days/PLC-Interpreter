@@ -232,7 +232,7 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-
+#|
 (interpret "Tests/Test1")
 (interpret "Tests/Test2")
 (interpret "Tests/Test3")
@@ -242,26 +242,27 @@
 (interpret "Tests/Test7")
 (interpret "Tests/Test8")
 (interpret "Tests/Test9")
-(interpret "Tests/Test10")
+(interpret "Tests/Test10")|#
 
 ; (interpret "Tests/Test11") ; error using before declaring
 ; (interpret "Tests/Test12") ; error variable not declared
 ; (interpret "Tests/Test13") ; error using before assigning
 ; (interpret "Tests/Test14") ; error redefining variable
 
+#|
 (interpret "Tests/Test15")
 (interpret "Tests/Test16") 
 (interpret "Tests/Test17")
 (interpret "Tests/Test18")
 (interpret "Tests/Test19")
-(interpret "Tests/Test20")
+(interpret "Tests/Test20")|#
 
-(interpret "Tests/Test30")
-(interpret "Tests/Test31")
-; (interpret "Tests/Test32")
-(interpret "Tests/Test33")
-(interpret "Tests/Test34")
-(interpret "Tests/Test35")
-;(interpret "Tests/Test36")
-;(interpret "Tests/Test37")
-(interpret "Tests/Test38")
+(interpret "Tests/Test30") ; 82
+(interpret "Tests/Test31") ; 100
+;(interpret "Tests/Test32") ; true
+(interpret "Tests/Test33") ; false
+(interpret "Tests/Test34") ; 107
+(interpret "Tests/Test35") ; 0
+;(interpret "Tests/Test36") ;error undeclared variable
+;(interpret "Tests/Test37") ; error invalid if statement
+(interpret "Tests/Test38") ; 100

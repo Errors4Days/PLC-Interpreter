@@ -255,3 +255,13 @@
 (interpret "Tests/Test18")
 (interpret "Tests/Test19")
 (interpret "Tests/Test20")
+
+(interpret "Tests/Test30")
+(interpret "Tests/Test31")
+; (interpret "Tests/Test32")
+(interpret "Tests/Test33")
+(interpret "Tests/Test34")
+(interpret "Tests/Test35")
+;(interpret "Tests/Test36")
+;(interpret "Tests/Test37")
+(interpret "Tests/Test38")

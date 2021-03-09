@@ -1,6 +1,6 @@
-var c = 5 * 5;
-var wru = true && false;
-if (c != 30 && !wru)
+var c = true;
+var a = false;
+if (c && !a)
     return true;
 else
     return false;

@@ -1,5 +1,5 @@
 var o = 112;
 var p = 33;
-if o != p
+if (o != p)
     var z = o * p;
 return z;

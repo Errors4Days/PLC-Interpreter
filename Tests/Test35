@@ -1,0 +1,4 @@
+var k = 0
+while (k > 0)
+    k = 49
+return k

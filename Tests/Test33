@@ -1,0 +1,6 @@
+var lad = true;
+var mad = false;
+if (mad || lad)
+    return !lad;
+else
+    return !mad;

@@ -1,0 +1,5 @@
+var u = 56;
+var m = 45;
+while (m <= 50)
+    m = m + 1;
+return u + m;

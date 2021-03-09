@@ -1,13 +1,6 @@
-var x;
-x = 10;
-var y = 3 * x + 5;
-while (y % x != 3)
-  y = y + 1;
-if (x > y)
-  return x;
-else if (x * x > y)
-  return x * x;
-else if (x * (x + x) > y)
-  return x * (x + x);
+var c = 5 * 5;
+var wru = true && false;
+if (c != 30 && !wru)
+    return true;
 else
-  return y - 1;
+    return false;

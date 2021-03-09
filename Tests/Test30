@@ -1,10 +1,9 @@
-var y = 1;
-var a = 2;
-while(y > 0)
-    if(a < 5)
-        a = a * a;
-    elif((a > 5) && (a < 15))
-        a = a + a;
-    else
-        y = y - 1;
+var y = 70;
+var a = 12;
+if(a < 5)
+    a = a * a;
+else if((a > 5) && (a < 20))
+    a = a + a;
+else
+    y = y - 1;
 return a;

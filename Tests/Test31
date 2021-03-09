@@ -1,9 +1,10 @@
 var x;
 var z;
+var y;
 x = 5;
 z = 7;
-if(x < z)
-    var y = 100;
+if (x < z)
+    y = 100;
 else
     x = 0;
 return y;

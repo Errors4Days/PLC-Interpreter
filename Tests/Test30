@@ -1,0 +1,9 @@
+var y = 70;
+var a = 12;
+if(a < 5)
+    a = a * a;
+else if((a > 5) && (a < 20))
+    a = y + a;
+else
+    y = y - 1;
+return a;

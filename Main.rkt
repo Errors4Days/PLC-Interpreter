@@ -218,7 +218,9 @@
       [(eq? (operator (nextExecute expression)) 'if)
        (M-if (nextExecute expression) (remainderExpression expression) vars)]
       [(eq? (operator (nextExecute expression)) 'while)
-       (M-while (nextExecute expression) (remainderExpression expression) vars)])))
+       (M-while (nextExecute expression) (remainderExpression expression) vars)]
+      [(eq? (operator (nextExecute) 'begin))
+       ()])))
 
 
 ;;; *******************************
@@ -232,6 +234,9 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
+(parser "temp.txt")
+
+; Part 1
 #|
 (interpret "Tests/Test1")
 (interpret "Tests/Test2")
@@ -258,6 +263,7 @@
 (interpret "Tests/Test20")|#
 
 ;;; SELF MADE TEST CASES
+#|
 (interpret "Tests/Test30")     ;output should be 82
 (interpret "Tests/Test31")     ;output should be 100
 (interpret "Tests/Test32")     ;output should be 'true
@@ -266,4 +272,4 @@
 (interpret "Tests/Test35")     ;output should be 0
 ; (interpret "Tests/Test36")    ;throws error undeclared
 ; (interpret "Tests/Test37")    ;throws error invalid if
-(interpret "Tests/Test38")     ;output should be 100
+(interpret "Tests/Test38")     ;output should be 100 |#

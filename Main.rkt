@@ -34,12 +34,19 @@
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
 ; Inserts a varaible or a variable number pair
-(define insert
-  (lambda (og new lis)
+; (caller 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
+(define insert-cps
+  (lambda (var value varlis valuelis return)
     (cond
-      [(null? lis) (error 'variable-not-declared)]
-      [(member*? og (car lis)) (cons (append (cons og '()) (cons new '())) (cdr lis))]
-      [else (cons (car lis) (insert og new (cdr lis)))])))
+      [(null? varlis) (error 'variable-not-declared)]
+      [(null? value) (error 'cannot-assign-null-to-a-variable)]
+      [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
+      [else (insertion var value (cdr varlis) (cdr valuelis)
+                       (lambda (v) (return (cons (car valuelis) v))))])))
+(define insert-call
+  (lambda (var value lis)
+    (insertion var value (car lis) (cadr lis) (lambda (v) (cons (car lis) (list v))))))
+
 ; Get variable value
 (define getValue
   (lambda (varName lis)
@@ -137,9 +144,8 @@
   (lambda (expression vars)
     (cond
       [(not (null? (cddr expression)))
-       (M-assign (cons '= (listMaker (leftoperand expression)
+       (M-assign (cons '= (list (leftoperand expression)
                                      (M-evaluate (rightoperand expression) vars)))
-                 ; Declaration with an assignment
                  (M-declare (listMaker 'var (leftoperand expression)) vars))]
       [(member*? (leftoperand expression) vars) (error 'redefining-variable)]
       ; Standard declaration

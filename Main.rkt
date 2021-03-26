@@ -16,6 +16,14 @@
 (define nextExecute car)
 (define remainderExpression cdr)
 
+#|
+Changed for part 2 of interpreter proj
+insertion, declaration, assign
+
+Still need to change
+Everything Else and Assignment requirements
+|#
+
 ;combines int_val and leftoperand because it's frequency
 (define left_val
   (lambda (val vars)
@@ -34,18 +42,19 @@
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
 ; Inserts a varaible or a variable number pair
-; (caller 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
+; (insert 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
 (define insert-cps
   (lambda (var value varlis valuelis return)
     (cond
       [(null? varlis) (error 'variable-not-declared)]
       [(null? value) (error 'cannot-assign-null-to-a-variable)]
+      ;[(and (eq? var (car varlis)) (null? valuelis)) (return (list value))]
       [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
-      [else (insertion var value (cdr varlis) (cdr valuelis)
+      [else (insert-cps var value (cdr varlis) (cdr valuelis)
                        (lambda (v) (return (cons (car valuelis) v))))])))
-(define insert-call
+(define insert
   (lambda (var value lis)
-    (insertion var value (car lis) (cadr lis) (lambda (v) (cons (car lis) (list v))))))
+    (insert-cps var value (car lis) (cadr lis) (lambda (v) (cons (car lis) (list v))))))
 
 ; Get variable value
 (define getValue
@@ -143,13 +152,15 @@
 (define M-declare
   (lambda (expression vars)
     (cond
+      ; Declaration and assignment
       [(not (null? (cddr expression)))
        (M-assign (cons '= (list (leftoperand expression)
                                      (M-evaluate (rightoperand expression) vars)))
-                 (M-declare (listMaker 'var (leftoperand expression)) vars))]
-      [(member*? (leftoperand expression) vars) (error 'redefining-variable)]
+                 (M-declare (list 'var (leftoperand expression)) vars))]
+      ; Error redefining
+      [(member*? (leftoperand expression) (car vars)) (error 'redefining-variable)]
       ; Standard declaration
-      [else (cons (cons (leftoperand expression) '()) vars)])))
+      [else (cons (cons (leftoperand expression) (car vars)) (list (cons '() (cadr vars))))])))
 
 ; Maps variables with values
 ; '(= x value/expression)

@@ -41,7 +41,7 @@ Everything Else and Assignment requirements
                              (member*? a (cdr lis)))]
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
-; Inserts a varaible or a variable number pair
+; Replaces a variable value
 ; (insert 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
 (define insert-cps
   (lambda (var value varlis valuelis return)
@@ -55,16 +55,26 @@ Everything Else and Assignment requirements
 (define insert
   (lambda (var value lis)
     (insert-cps var value (car lis) (cadr lis) (lambda (v) (cons (car lis) (list v))))))
-
 ; Get variable value
 (define getValue
   (lambda (varName lis)
     (cond
-      [(null? lis) (error 'variable-not-declared)]
-      [(and (member*? varName (car lis)) (null? (cdar lis)))
+      [(null? (car lis)) (error 'variable-not-declared)]
+      [(and (eq? varName (caar lis)) (null? (caadr lis)))
        (error 'variable-not-assigned)]
-      [(member*? varName (car lis)) (cadr (car lis))]
-      [else (getValue varName (cdr lis))])))
+      [(eq? varName (caar lis)) (caadr lis)]
+      [else (getValue varName (mymap-caller cdr lis))])))
+; Applies a function on all elements of a 2d list using cps
+(define mymap
+  (lambda (func lis return)
+    (if (null? lis)
+        (return '())
+        (mymap func (cdr lis) (lambda (v) (return (append (cons (func (car lis)) '()) v)))))))
+;Calls on mymap too simplify the code for vectormult
+(define mymap-caller
+  (lambda (func lis)
+    (mymap func lis (lambda (v) v))))
+;(mymap-caller cdr '((1 2 3) (4 5 6))) ;((2 3) (5 
 ; Takes in variable or value and returns a value
 (define int_val
   (lambda (val vars)
@@ -245,7 +255,7 @@ Everything Else and Assignment requirements
 ;;; *******************************
 (define interpret
   (lambda (filename)
-    (M-state (parser filename) '() )))
+    (M-state (parser filename) '(()()))))
 
 
 ;;; *******************************
@@ -277,7 +287,7 @@ Everything Else and Assignment requirements
 (interpret "Tests/Test17")
 (interpret "Tests/Test18")
 (interpret "Tests/Test19")
-(interpret "Tests/Test20")|#
+(interpret "Tests/Test20") |#
 
 ;;; SELF MADE TEST CASES
 #|

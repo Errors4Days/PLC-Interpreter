@@ -45,7 +45,7 @@
       [(null? vars) #f]
       [(member*? aVar (unbox (car vars))) #t]
       [else (declare? aVar (cdr vars))])))
-
+; Checks if a var is declared on the lowest layer
 (define declareStack?
   (lambda (aVar vars)
     (cond
@@ -57,16 +57,19 @@
 (define insert-cps
   (lambda (var value varlis valuelis return)
     (cond
-      [(null? varlis) (error 'variable-not-declared)]
+      ;[(null? varlis) (error 'variable-not-declared)]
       [(null? value) (error 'cannot-assign-null-to-a-variable)]
       [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
       [else (insert-cps var value (cdr varlis) (cdr valuelis)
                        (lambda (v) (return (cons (car valuelis) v))))])))
 (define insert
   (lambda (var value lis)
-    (insert-cps var value (car (unbox (car lis))) (cadr (unbox (car lis)))
-                (lambda (v) (cons (box (cons (car (unbox (car lis))) (list v))) (cdr lis))))))
-
+    (cond
+      [(null? lis) (error 'variable-not-declared)]
+      [(declareStack? var lis) (insert-cps var value (car (unbox (car lis))) (cadr (unbox (car lis)))
+                                           (lambda (v) (cons (box (cons (car (unbox (car lis))) (list v))) (cdr lis))))]
+      [else (cons (car lis) (insert var value (cdr lis)))])))
+       
 ; Get variable value
 (define getValue
   (lambda (varA vars)
@@ -213,6 +216,8 @@
        (M-return (cadr expression) vars)]          ; Finds and runs return function
       [(eq? (operator expression) '=)
        (M-state next (M-assign expression vars))]  ; Executes variable assignment values
+      [(eq? (operator expression) 'begin)
+       (M-begin (cdr expression) vars)]
       [else (error 'invalid-if-statement)])))
 
 ; while statements
@@ -224,9 +229,10 @@
        (M-while expression next (M-while (rightoperand expression) next vars))] ; Enter loop, run body
       [(eq? (operator expression) 'while) (M-state next vars)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
+      [(eq? (operator expression) 'begin)
+       (M-begin (cdr expression) vars)]
       [else (error 'invalid-while-loop)])))
       
-
 ; Passes the expression into the correct function for evaluation
 (define M-evaluate
   (lambda (expression vars)
@@ -251,11 +257,18 @@
       [(or (eq? expression #f) (eq? expression 'false)) 'false] ; Given a boolean
       [else (M-return (getValue expression vars) vars)]))) ; Given a variable
 
+(define M-begin
+  (lambda (expression vars)
+    (cond
+      [(null? expression) (cdr vars)]
+      [(eq? (operator expression) 'begin) (M-begin (cdr expression) vars)]
+      [else (M-state expression (cons (box '(()())) vars))]))) ; fix this line
+     
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
   (lambda (expression vars)
     (cond
-      [(null? expression) 'void]
+      [(null? expression) vars]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars)]
       [(eq? (operator (nextExecute expression)) 'var)
@@ -267,7 +280,8 @@
       [(eq? (operator (nextExecute expression)) 'while)
        (M-while (nextExecute expression) (remainderExpression expression) vars)]
       [(eq? (operator (nextExecute expression)) 'begin)
-       (M-state (nextExecute expression))])))
+       (M-state (remainderExpression expression)
+                                     (M-begin (nextExecute expression) vars))])))
 
 
 ;;; *******************************
@@ -281,7 +295,7 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-(parser "Tests/Test5")
+(interpret "temp.txt")
 
 ; Part 1
 #|

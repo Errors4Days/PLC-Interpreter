@@ -16,23 +16,17 @@
 (define nextExecute car)
 (define remainderExpression cdr)
 
-#|
-Changed for part 2 of interpreter proj
-insertion, declaration, assign
-
-Still need to change
-Everything Else and Assignment requirements
-|#
-
-;combines int_val and leftoperand because it's frequency
+;combines int_val and leftoperand because of it's frequency
 (define left_val
   (lambda (val vars)
     (int_val (leftoperand val) vars)))
-;combines int_val and rightoperand because it's frequency
+
+;combines int_val and rightoperand because of it's frequency
 (define right_val
   (lambda (val vars)
     (int_val (rightoperand val) vars)))
 
+; Checks if an atom is in a list
 (define member*?
   (lambda (a lis)
     (cond
@@ -41,6 +35,15 @@ Everything Else and Assignment requirements
                              (member*? a (cdr lis)))]
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
+
+; Checks if an var is delcared
+(define declare?
+  (lambda (aVar vars)
+    (cond
+      [(null? vars) #f]
+      [(member*? aVar (unbox (car vars))) #t]
+      [else (declare? aVar (cdr vars))])))
+
 ; Replaces a variable value
 ; (insert 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
 (define insert-cps
@@ -48,39 +51,47 @@ Everything Else and Assignment requirements
     (cond
       [(null? varlis) (error 'variable-not-declared)]
       [(null? value) (error 'cannot-assign-null-to-a-variable)]
-      ;[(and (eq? var (car varlis)) (null? valuelis)) (return (list value))]
       [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
       [else (insert-cps var value (cdr varlis) (cdr valuelis)
                        (lambda (v) (return (cons (car valuelis) v))))])))
 (define insert
   (lambda (var value lis)
-    (insert-cps var value (car lis) (cadr lis) (lambda (v) (cons (car lis) (list v))))))
+    (insert-cps var value (car (unbox (car lis))) (cadr (unbox (car lis)))
+                (lambda (v) (cons (box (cons (car (unbox (car lis))) (list v))) (cdr lis))))))
+
 ; Get variable value
 (define getValue
+  (lambda (varA vars)
+    (cond
+      [(null? vars) (error 'variable-not-declared)]
+      [(not (null? (getValue-helper varA (unbox (car vars)))))
+       (getValue-helper varA (unbox (car vars)))]
+      [else (getValue varA (cdr vars))])))
+(define getValue-helper
   (lambda (varName lis)
     (cond
-      [(null? (car lis)) (error 'variable-not-declared)]
+      [(null? (car lis)) '()]
       [(and (eq? varName (caar lis)) (null? (caadr lis)))
        (error 'variable-not-assigned)]
       [(eq? varName (caar lis)) (caadr lis)]
-      [else (getValue varName (mymap-caller cdr lis))])))
+      [else (getValue-helper varName (mymap-caller cdr lis))])))
+
 ; Applies a function on all elements of a 2d list using cps
 (define mymap
   (lambda (func lis return)
     (if (null? lis)
         (return '())
         (mymap func (cdr lis) (lambda (v) (return (append (cons (func (car lis)) '()) v)))))))
-;Calls on mymap too simplify the code for vectormult
 (define mymap-caller
   (lambda (func lis)
     (mymap func lis (lambda (v) v))))
-;(mymap-caller cdr '((1 2 3) (4 5 6))) ;((2 3) (5 
+
 ; Takes in variable or value and returns a value
 (define int_val
   (lambda (val vars)
     (cond
       [(number? val) val]
-      [(member*? val vars)(getValue val vars)]
+      [(declare? val vars)(getValue val vars)]
       [else val])))
 ; Takes two atoms and returns them in a list
 (define listMaker
@@ -168,9 +179,11 @@ Everything Else and Assignment requirements
                                      (M-evaluate (rightoperand expression) vars)))
                  (M-declare (list 'var (leftoperand expression)) vars))]
       ; Error redefining
-      [(member*? (leftoperand expression) (car vars)) (error 'redefining-variable)]
+      [(declare? (leftoperand expression) vars) (error 'redefining-variable)]
       ; Standard declaration
-      [else (cons (cons (leftoperand expression) (car vars)) (list (cons '() (cadr vars))))])))
+      [else (cons (box (cons (cons (leftoperand expression) (car (unbox (car vars))))
+                  (list (cons '() (cadr (unbox (car vars))))))) (cdr vars))])))
+      ;[else (cons (cons (leftoperand expression) (car vars)) (list (cons '() (cadr vars))))])))
 
 ; Maps variables with values
 ; '(= x value/expression)
@@ -255,26 +268,26 @@ Everything Else and Assignment requirements
 ;;; *******************************
 (define interpret
   (lambda (filename)
-    (M-state (parser filename) '(()()))))
+    (M-state (parser filename) (list (box '(()()))))))
 
 
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-(parser "temp.txt")
+(parser "Tests/Test5")
 
 ; Part 1
 #|
-(interpret "Tests/Test1")
-(interpret "Tests/Test2")
-(interpret "Tests/Test3")
-(interpret "Tests/Test4")
-(interpret "Tests/Test5")
-(interpret "Tests/Test6")
-(interpret "Tests/Test7")
-(interpret "Tests/Test8")
-(interpret "Tests/Test9")
-(interpret "Tests/Test10")|#
+(interpret "Tests/Test1") ; 150
+(interpret "Tests/Test2") ; -4
+(interpret "Tests/Test3") ; 10
+(interpret "Tests/Test4") ; 16
+(interpret "Tests/Test5") ; 220
+(interpret "Tests/Test6") ; 5
+(interpret "Tests/Test7") ; 6
+(interpret "Tests/Test8") ; 10
+(interpret "Tests/Test9") ; 5
+(interpret "Tests/Test10") ; -39 |#
 
 ; (interpret "Tests/Test11") ; error using before declaring
 ; (interpret "Tests/Test12") ; error variable not declared
@@ -282,12 +295,12 @@ Everything Else and Assignment requirements
 ; (interpret "Tests/Test14") ; error redefining variable
 
 #|
-(interpret "Tests/Test15")
-(interpret "Tests/Test16") 
-(interpret "Tests/Test17")
-(interpret "Tests/Test18")
-(interpret "Tests/Test19")
-(interpret "Tests/Test20") |#
+(interpret "Tests/Test15") ; true
+(interpret "Tests/Test16") ; 100
+(interpret "Tests/Test17") ; false
+(interpret "Tests/Test18") ; true
+(interpret "Tests/Test19") ; 128
+(interpret "Tests/Test20") ; 12 |#
 
 ;;; SELF MADE TEST CASES
 #|

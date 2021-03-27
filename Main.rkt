@@ -1,5 +1,7 @@
 #lang racket
 ; Elizabeth Shumaker and Justin Lee
+; TODO:
+; abstract bottom of M-declare
 
 (require "simpleParser.rkt")
 ;;; *******************************
@@ -36,7 +38,7 @@
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
 
-; Checks if an var is delcared
+; Checks if a var is declared at all
 (define declare?
   (lambda (aVar vars)
     (cond
@@ -44,8 +46,14 @@
       [(member*? aVar (unbox (car vars))) #t]
       [else (declare? aVar (cdr vars))])))
 
+(define declareStack?
+  (lambda (aVar vars)
+    (cond
+      [(null? vars) #f]
+      [(member*? aVar (unbox (car vars))) #t]
+      [else #f])))
+
 ; Replaces a variable value
-; (insert 'x '45 '((a x c) (1 2 3))) => ((a x c) (1 45 3))
 (define insert-cps
   (lambda (var value varlis valuelis return)
     (cond
@@ -183,7 +191,6 @@
       ; Standard declaration
       [else (cons (box (cons (cons (leftoperand expression) (car (unbox (car vars))))
                   (list (cons '() (cadr (unbox (car vars))))))) (cdr vars))])))
-      ;[else (cons (cons (leftoperand expression) (car vars)) (list (cons '() (cadr vars))))])))
 
 ; Maps variables with values
 ; '(= x value/expression)

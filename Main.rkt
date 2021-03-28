@@ -166,7 +166,7 @@
        (getValue expression vars)]       ; if variable and variable is boolean, return boolean
       ; if ! statement and boolean value, return opposite
       [(and (eq? (operator expression) '!) (boolean? (M-evaluate (leftoperand expression) vars)))
-                                           (not (M-bool (leftoperand expression) vars))]
+       (not (M-evaluate (leftoperand expression) vars))]
       [(not (boolean? (M-evaluate (leftoperand expression) vars)))
        (error 'input-not-boolean)]       ; if leftoperand not boolean, error
       [(not (boolean? (M-evaluate (rightoperand expression) vars)))
@@ -295,7 +295,7 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-(interpret "temp.txt")
+;(interpret "temp.txt")
 
 ; Part 1
 #|

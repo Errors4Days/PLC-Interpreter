@@ -213,11 +213,11 @@
       [(eq? (operator expression) 'if)
        (M-if (cadddr expression) next vars)]       ; Run else/ else if
       [(eq? (operator expression) 'return)
-       (M-return (cadr expression) vars)]          ; Finds and runs return function
+       (M-return (cadr expression) vars)]          ; Runs return function
       [(eq? (operator expression) '=)
        (M-state next (M-assign expression vars))]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
-       (M-state next (cdr (M-begin (cdr expression) vars)))]
+       (M-state next (M-begin (cdr expression) vars))] ; Runs a bracket
       [else (error 'invalid-if-statement)])))
 
 ; while statements
@@ -225,13 +225,12 @@
 (define M-while
   (lambda (expression next vars)
     (cond
-      [(not (list? vars)) vars]
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (M-while expression next (M-while (rightoperand expression) next vars))] ; Enter loop, run body
       [(eq? (operator expression) 'while) (M-state next vars)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [(eq? (operator expression) 'begin)
-       (M-state next (cdr (M-begin (cdr expression) vars)))]
+       (M-begin (cdr expression) vars)]
       [else (error 'invalid-while-loop)])))
       
 ; Passes the expression into the correct function for evaluation
@@ -258,12 +257,12 @@
       [(or (eq? expression #f) (eq? expression 'false)) 'false] ; Given a boolean
       [else (M-return (getValue expression vars) vars)]))) ; Given a variable
 
+; Runs the bracket code and discards the lowest layer
 (define M-begin
   (lambda (expression vars)
     (cond
-      [(null? expression) (cdr vars)]
       [(eq? (operator expression) 'begin) (M-begin (cdr expression) vars)]
-      [else (M-state expression (cons (box '(()())) vars))])))
+      [else (cdr (M-state expression (cons (box '(()())) vars)))])))
      
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
@@ -282,7 +281,7 @@
        (M-while (nextExecute expression) (remainderExpression expression) vars)]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression)
-                                     (cdr (M-begin (nextExecute expression) vars)))])))
+                                     (M-begin (nextExecute expression) vars))])))
 
 
 ;;; *******************************
@@ -339,11 +338,11 @@
 ;;; TESTS FOR INTERPRETER PT2
 
 ;(interpret "Tests2/Test1")    ;20
-(interpret "Tests2/Test2")    ;164
-(interpret "Tests2/Test3")    ;32
-(interpret "Tests2/Test4")    ;2
+;(interpret "Tests2/Test2")    ;164
+;(interpret "Tests2/Test3")    ;32
+;(interpret "Tests2/Test4")    ;2
 ;(interpret "Tests2/Test5")    ;Error
-(interpret "Tests2/Test6")    ;25
+;(interpret "Tests2/Test6")    ;25
 (interpret "Tests2/Test7")    ;21
 (interpret "Tests2/Test8")    ;6
 (interpret "Tests2/Test9")    ;-1
@@ -356,4 +355,4 @@
 (interpret "Tests2/Test16")   ;110
 (interpret "Tests2/Test17")   ;2000400
 (interpret "Tests2/Test18")   ;101
-;(interpret "Tests2/Test19")   ;Error
+;(interpret "Tests2/Test19")   ;Error |#

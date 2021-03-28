@@ -291,7 +291,7 @@
   (lambda (filename)
     (call/cc
      (lambda (break)
-    (M-state (parser filename) (list (box '(()()))) break)))))
+       (M-state (parser filename) (list (box '(()()))) break)))))
 
 
 ;;; *******************************
@@ -338,6 +338,7 @@
 (interpret "Tests/Test38")     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
+
 (interpret "Tests2/Test1")    ;20
 (interpret "Tests2/Test2")    ;164
 (interpret "Tests2/Test3")    ;32
@@ -345,7 +346,8 @@
 ;(interpret "Tests2/Test5")    ;Error
 (interpret "Tests2/Test6")    ;25
 (interpret "Tests2/Test7")    ;21
-(interpret "Tests2/Test8")    ;6
+(interpret "Tests2/Test8")    ;6 
+(parser "Tests2/Test9")
 (interpret "Tests2/Test9")    ;-1
 (interpret "Tests2/Test10")   ;789
 ;(interpret "Tests2/Test11")   ;Error

@@ -217,7 +217,7 @@
       [(eq? (operator expression) '=)
        (M-state next (M-assign expression vars))]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
-       (M-begin (cdr expression) vars)] ; Runs a bracket
+       (M-state next (M-begin (cdr expression) vars))] ; Runs a bracket
       [else (error 'invalid-if-statement)])))
 
 ; while statements

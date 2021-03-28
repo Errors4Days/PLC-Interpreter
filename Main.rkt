@@ -166,7 +166,7 @@
        (getValue expression vars)]       ; if variable and variable is boolean, return boolean
       ; if ! statement and boolean value, return opposite
       [(and (eq? (operator expression) '!) (boolean? (M-evaluate (leftoperand expression) vars)))
-                                           (not (M-bool (leftoperand expression) vars))]
+                                           (not (M-evaluate (leftoperand expression) vars))]
       [(not (boolean? (M-evaluate (leftoperand expression) vars)))
        (error 'input-not-boolean)]       ; if leftoperand not boolean, error
       [(not (boolean? (M-evaluate (rightoperand expression) vars)))
@@ -184,13 +184,13 @@
 (define M-declare
   (lambda (expression vars)
     (cond
+      ; Error redefining
+      [(declareStack? (leftoperand expression) vars) (error 'redefining-variable)]
       ; Declaration and assignment
       [(not (null? (cddr expression)))
        (M-assign (cons '= (list (leftoperand expression)
                                      (M-evaluate (rightoperand expression) vars)))
                  (M-declare (list 'var (leftoperand expression)) vars))]
-      ; Error redefining
-      [(declare? (leftoperand expression) vars) (error 'redefining-variable)]
       ; Standard declaration
       [else (cons (box (cons (cons (leftoperand expression) (car (unbox (car vars))))
                   (list (cons '() (cadr (unbox (car vars))))))) (cdr vars))])))
@@ -217,7 +217,7 @@
       [(eq? (operator expression) '=)
        (M-state next (M-assign expression vars))]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
-       (M-begin (cdr expression) vars)]
+       (M-state next (cdr (M-begin (cdr expression) vars)))]
       [else (error 'invalid-if-statement)])))
 
 ; while statements
@@ -225,12 +225,13 @@
 (define M-while
   (lambda (expression next vars)
     (cond
+      [(not (list? vars)) vars]
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (M-while expression next (M-while (rightoperand expression) next vars))] ; Enter loop, run body
       [(eq? (operator expression) 'while) (M-state next vars)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [(eq? (operator expression) 'begin)
-       (M-begin (cdr expression) vars)]
+       (M-state next (cdr (M-begin (cdr expression) vars)))]
       [else (error 'invalid-while-loop)])))
       
 ; Passes the expression into the correct function for evaluation
@@ -262,7 +263,7 @@
     (cond
       [(null? expression) (cdr vars)]
       [(eq? (operator expression) 'begin) (M-begin (cdr expression) vars)]
-      [else (M-state expression (cons (box '(()())) vars))]))) ; fix this line
+      [else (M-state expression (cons (box '(()())) vars))])))
      
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
@@ -281,7 +282,7 @@
        (M-while (nextExecute expression) (remainderExpression expression) vars)]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression)
-                                     (M-begin (nextExecute expression) vars))])))
+                                     (cdr (M-begin (nextExecute expression) vars)))])))
 
 
 ;;; *******************************
@@ -295,7 +296,6 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-(interpret "temp.txt")
 
 ; Part 1
 #|
@@ -336,8 +336,8 @@
 (interpret "Tests/Test38")     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-#|
-(interpret "Tests2/Test1")    ;20
+
+;(interpret "Tests2/Test1")    ;20
 (interpret "Tests2/Test2")    ;164
 (interpret "Tests2/Test3")    ;32
 (interpret "Tests2/Test4")    ;2
@@ -356,4 +356,3 @@
 (interpret "Tests2/Test17")   ;2000400
 (interpret "Tests2/Test18")   ;101
 ;(interpret "Tests2/Test19")   ;Error
-|#

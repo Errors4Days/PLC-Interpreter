@@ -263,7 +263,7 @@
     (cond
       [(eq? (operator expression) 'begin) (M-begin (cdr expression) vars break)]
       [else (cdr (M-state expression (cons (box '(()())) vars) break))])))
-     
+
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
   (lambda (expression vars break)
@@ -346,8 +346,7 @@
 ;(interpret "Tests2/Test5")    ;Error
 (interpret "Tests2/Test6")    ;25
 (interpret "Tests2/Test7")    ;21
-(interpret "Tests2/Test8")    ;6 
-(parser "Tests2/Test9")
+(interpret "Tests2/Test8")    ;6
 (interpret "Tests2/Test9")    ;-1
 (interpret "Tests2/Test10")   ;789
 ;(interpret "Tests2/Test11")   ;Error

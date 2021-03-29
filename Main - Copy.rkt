@@ -115,6 +115,18 @@
 ;;; *******************************
 ;;; MAIN OPERATORS
 ;;; *******************************
+; Passes the expression into the correct function for evaluation
+(define M-evaluate
+  (lambda (expression vars)
+    (cond
+      [(or (eq? expression 'false) (eq? expression 'true)) (M-bool expression vars)] ; Single boolean
+      [(and (not (list? expression)) (number? expression)) expression]
+      [(and (not (list? expression)) (boolean? expression)) expression]
+      [(not (list? expression)) (getValue expression vars)] ; atom that is a variable or value
+      [(member*? (operator expression) '(+ - * / %)) (M-integer expression vars)] ; Math expression
+      [(member*? (operator expression) '(== != < > <= >=)) (M-compare expression vars)] ; Comparison
+      [(member*? (operator expression) '( && || !)) (M-bool expression vars)] ; Boolean expression
+      [else (error 'no-valid-operator)])))
 
 ; M-integer maps expressions to integer values
 ; operators: +, -, *, /, %
@@ -206,25 +218,18 @@
 ; if statements
 ; '(if (> x y) (return x)
 (define M-if
-  (lambda (expression next outer vars returns)
+  (lambda (expression next outer vars returns break continue throw)
     (cond
-      [(and (eq? (operator expression) 'if) (M-evaluate (leftoperand expression) vars))
-       (M-if (rightoperand expression) next outer vars returns)] ; if condition is true, run body
-      [(and (eq? (operator expression) 'if) (null? (lastQuadruple expression)))
-       (M-state next outer vars returns)]                        ; No else statement
-      [(eq? (operator expression) 'if)
-       (M-if (cadddr expression) next outer vars returns)]       ; Run else/ else if
-      [(eq? (operator expression) 'return)
-       (M-return (cadr expression) vars returns)]                ; Runs return function
-      [(eq? (operator expression) '=)
-       (M-state next outer (M-assign expression vars) returns)]  ; Executes variable assignment 
-      [(eq? (operator expression) 'begin)
-       (M-state next outer (M-begin expression outer vars returns) returns)] ; Runs a bracket
-      [(eq? (operator expression) 'break)
-       (M-state '((break)) outer vars returns)]
-       [(eq? (operator expression) 'continue)
-       (M-state '((continue)) outer vars returns)]
-      [else (error 'invalid-if-statement)])))
+      [(not (boolean? (M-evaluate (leftoperand expression) vars)))
+       (error 'invalid-if-statement-condition)]
+      ; Condition true
+      [(M-evaluate (leftoperand expression) vars)
+       (M-state (cons (rightoperand expression) next) outer vars returns break continue throw)]
+      ; Else
+      [(null? (lastQuadruple expression))
+       (M-state (cons (rightoperand expression) next) vars)]                        
+      ; No else if
+      [else (M-state next outer vars returns break continue throw)])))
 
 ; while statements
 ; '(while (!= (% y x) 3) (= y (+ y 1)))
@@ -239,6 +244,7 @@
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))
 
+
 (define M-try-catch
   (lambda (expression outer vars returns)
     (cond
@@ -250,19 +256,6 @@
       ;[()] ; catch
       ;[()] ; throw
       [else (error 'idk-yet)]))) ;else
-
-; Passes the expression into the correct function for evaluation
-(define M-evaluate
-  (lambda (expression vars)
-    (cond
-      [(or (eq? expression 'false) (eq? expression 'true)) (M-bool expression vars)] ; Single boolean
-      [(and (not (list? expression)) (number? expression)) expression]
-      [(and (not (list? expression)) (boolean? expression)) expression]
-      [(not (list? expression)) (getValue expression vars)] ; atom that is a variable or value
-      [(member*? (operator expression) '(+ - * / %)) (M-integer expression vars)] ; Math expression
-      [(member*? (operator expression) '(== != < > <= >=)) (M-compare expression vars)] ; Comparison
-      [(member*? (operator expression) '( && || !)) (M-bool expression vars)] ; Boolean expression
-      [else (error 'no-valid-operator)])))
 
 ; Returns a value or boolean
 ; '(M-return 'x)
@@ -284,7 +277,7 @@
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
-  (lambda (expression outer vars returns)
+  (lambda (expression outer vars returns break continue throw)
     (cond
       [(null? expression) vars]
       [(and (null? expression) (null? vars) (null? outer)) (error 'break-not-in-loop)]
@@ -316,12 +309,12 @@
 ;;; *******************************
 ;;; INTERPRETER FUNCTION
 ;;; *******************************
+(parser "Tests/Test17")
 (define interpret
   (lambda (filename)
     (call/cc
      (lambda (returns)
-       (M-state (parser filename) '() (list (box '(()()))) returns)))))
-
+       (M-state (parser filename) '() (list (box '(()()))) returns '() '() '())))))
 
 ;;; *******************************
 ;;; Provided Test Cases
@@ -377,7 +370,7 @@
 (interpret "Tests2/Test7")    ;21
 (interpret "Tests2/Test8")    ;6
 (interpret "Tests2/Test9")    ;-1 |#
-(interpret "Tests2/Test10")  ;789
+;(interpret "Tests2/Test10")  ;789
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error

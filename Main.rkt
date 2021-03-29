@@ -274,10 +274,12 @@
 
 ; Runs the bracket code and discards the lowest layer
 (define M-begin
-  (lambda (expression outer vars returns)
+  (lambda (expression vars returns break continue throw)
     (cond
-      [(eq? (operator expression) 'begin) (M-begin (cdr expression) outer vars returns)]
-      [else (cdr (M-state expression outer (cons (box '(()())) vars) returns))])))
+      [(eq? (operator expression) 'begin)
+       (M-begin (cdr expression) vars returns break continue throw)]
+      [else (cdr (M-state expression
+                          (cons (box '(()())) vars) returns break continue throw))])))
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
@@ -299,7 +301,8 @@
        (M-while (nextExecute expression)(remainderExpression expression) vars returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression)
-                (M-begin (nextExecute expression) vars returns) returns)]
+                (M-begin (nextExecute expression) vars returns break continue throw)
+                returns break continue throw)]
       #|
       [(eq? (operator (nextExecute expression)) 'break)
        (returns (M-state outer '() (cdr vars) returns))]
@@ -364,23 +367,24 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-#|
-(interpret "Tests2/Test1")    ;20
-(interpret "Tests2/Test2")    ;164
-(interpret "Tests2/Test3")    ;32
-(interpret "Tests2/Test4")    ;2
+
+(eq? (interpret "Tests2/Test1") 20)    ;20
+(eq? (interpret "Tests2/Test2") 164)   ;164
+(eq? (interpret "Tests2/Test3") 32)    ;32
+(eq? (interpret "Tests2/Test4") 2)     ;2
 ;(interpret "Tests2/Test5")    ;Error
-(interpret "Tests2/Test6")    ;25
-(interpret "Tests2/Test7")    ;21
-(interpret "Tests2/Test8")    ;6
-(interpret "Tests2/Test9")    ;-1 |#
-;(interpret "Tests2/Test10")  ;789
+(eq? (interpret "Tests2/Test6") 25)    ;25
+(eq? (interpret "Tests2/Test7") 21)    ;21
+(eq? (interpret "Tests2/Test8") 6)     ;6
+(eq? (interpret "Tests2/Test9") -1)    ;-1 |#
+;(eq? (interpret "Tests2/Test10") 789)  ;789
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error
-;(interpret "Tests2/Test14")   ;12
-#|(interpret "Tests2/Test15")   ;125
-(interpret "Tests2/Test16")   ;110
-(interpret "Tests2/Test17")   ;2000400
-(interpret "Tests2/Test18")   ;101
+;(eq? (interpret "Tests2/Test14") 12)   ;12
+#|
+(eq? (interpret "Tests2/Test15") 125)   ;125
+(eq? (interpret "Tests2/Test16") 110)  ;110
+(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
+(eq? (interpret "Tests2/Test18") 101)  ;101
 ;(interpret "Tests2/Test19")   ;Error |#

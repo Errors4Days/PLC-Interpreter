@@ -363,8 +363,6 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-- #|
- -; #|
 (eq? (interpret "Tests2/Test1") 20)    ;20
 (eq? (interpret "Tests2/Test2") 164)   ;164
 (eq? (interpret "Tests2/Test3") 32)    ;32

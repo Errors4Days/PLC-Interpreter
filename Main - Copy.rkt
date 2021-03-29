@@ -213,7 +213,7 @@
       [(eq? (operator expression) 'if)
        (M-if (cadddr expression) next vars break)]       ; Run else/ else if
       [(eq? (operator expression) 'return)
-       (M-return (cadr expression) vars)]          ; Runs return function
+       (M-return (cadr expression) vars)]                ; Runs return function
       [(eq? (operator expression) '=)
        (M-state next (M-assign expression vars) break)]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
@@ -231,6 +231,7 @@
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [(eq? (operator expression) 'begin)
        (M-begin (cdr expression) vars break)]
+      ;[(eq? (operator expression) 'break) (break (M-state expression vars break)) ]
       [else (error 'invalid-while-loop)])))
       
 ; Passes the expression into the correct function for evaluation
@@ -278,7 +279,8 @@
       [(eq? (operator (nextExecute expression)) 'if)
        (M-if (nextExecute expression) (remainderExpression expression) vars break)]
       [(eq? (operator (nextExecute expression)) 'while)
-       (M-while (nextExecute expression) (remainderExpression expression) vars break)]
+       (M-while (nextExecute expression)
+                (remainderExpression expression) vars (break (cadr expression)))]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression)
                                      (M-begin (nextExecute expression) vars break) break)])))
@@ -353,7 +355,7 @@
 ;(interpret "Tests2/Test12")   ;Error
 ;(interpret "Tests2/Test13")   ;Error
 (interpret "Tests2/Test14")   ;12
-(interpret "Tests2/Test15")   ;125
+#|(interpret "Tests2/Test15")   ;125
 (interpret "Tests2/Test16")   ;110
 (interpret "Tests2/Test17")   ;2000400
 (interpret "Tests2/Test18")   ;101

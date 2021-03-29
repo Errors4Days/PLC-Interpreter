@@ -240,15 +240,20 @@
           (error 'invalid-while-loop)]
          ; Enter while body
          [(M-evaluate (leftoperand expression) vars)
-          (M-state (cons (rightoperand expression) (cons expression next)) vars returns break continue throw)]
+          (M-state (cons expression next)
+          (call/cc (lambda (k)
+          (M-state (cons (rightoperand expression) (cons expression next)) vars returns break k throw)))
+                     returns break continue throw)]
          ; Exit while body
          [else (M-state next vars returns break continue throw)])))
 
 (define M-while
   (lambda (expression next vars returns break continue throw)
-    (call/cc
-     (lambda (k)
-       (M-while-helper expression next vars returns k continue throw)))))
+    (M-state next
+             (call/cc
+              (lambda (k)
+                (M-while-helper expression next vars returns k continue throw)))
+             returns break continue throw)))
 
 (define M-try-catch
   (lambda (expression outer vars returns)
@@ -286,8 +291,8 @@
 (define M-state
   (lambda (expression vars returns break continue throw)
     (cond
-      [(null? expression) vars]
       [(and (null? expression) (null? vars)) (error 'break-not-in-loop)]
+      [(null? expression) vars]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'var)
@@ -305,10 +310,10 @@
                 (M-begin (nextExecute expression) vars returns break continue throw)
                 returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'break)
-       (break (M-state '() (cdr vars) returns break continue throw))] ;(cdr vars) here?
-      #|
+       (break (cdr vars))] ;(cdr vars) here?
       [(eq? (operator (nextExecute expression)) 'continue)
        (continue vars)]
+      #|
        [(eq? (operator (nextExecute expression)) 'try)
        (M-try-catch (nextExecute expression) (remainderExpression expression) vars returns) ]
       [(eq? (operator (nextExecute expression)) 'throw)
@@ -363,6 +368,7 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
+#|
 (eq? (interpret "Tests2/Test1") 20)    ;20
 (eq? (interpret "Tests2/Test2") 164)   ;164
 (eq? (interpret "Tests2/Test3") 32)    ;32
@@ -370,15 +376,15 @@
 ;(interpret "Tests2/Test5")    ;Error
 (eq? (interpret "Tests2/Test6") 25)    ;25
 (eq? (interpret "Tests2/Test7") 21)    ;21|#
-;(eq? (interpret "Tests2/Test8") 6)     ;6
+(eq? (interpret "Tests2/Test8") 6)     ;6
 (eq? (interpret "Tests2/Test9") -1)    ;-1
-(interpret "Tests2/Test9")
-;(eq? (interpret "Tests2/Test10") 789)  ;789
+(eq? (interpret "Tests2/Test10") 789)  ;789
+(interpret "Tests2/Test10")
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error
 ;(eq? (interpret "Tests2/Test14") 12)   ;12
-;#|
+#|
 (eq? (interpret "Tests2/Test15") 125)   ;125
 (eq? (interpret "Tests2/Test16") 110)  ;110
 (eq? (interpret "Tests2/Test17") 2000400)  ;2000400

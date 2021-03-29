@@ -67,7 +67,9 @@
     (cond
       [(null? lis) (error 'variable-not-declared)]
       [(declareStack? var lis) (insert-cps var value (car (unbox (car lis))) (cadr (unbox (car lis)))
-                                           (lambda (v) (cons (box (cons (car (unbox (car lis))) (list v))) (cdr lis))))]
+                                           (lambda (v) (cons (box (cons (car
+                                                                         (unbox (car lis)))
+                                                                        (list v))) (cdr lis))))]
       [else (cons (car lis) (insert var value (cdr lis)))])))
        
 ; Get variable value
@@ -215,7 +217,7 @@
       [(eq? (operator expression) 'return)
        (M-return (cadr expression) vars returns)]                ; Runs return function
       [(eq? (operator expression) '=)
-       (M-state next outer (M-assign expression vars) returns)]  ; Executes variable assignment values
+       (M-state next outer (M-assign expression vars) returns)]  ; Executes variable assignment 
       [(eq? (operator expression) 'begin)
        (M-state next outer (M-begin expression outer vars returns) returns)] ; Runs a bracket
       [(eq? (operator expression) 'break)
@@ -232,8 +234,8 @@
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (call/cc (lambda (k)
                   (M-while expression next
-                           (M-state (list (rightoperand expression)) next vars k) returns)))]; Run body
-      [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit loop
+                           (M-state (list (rightoperand expression)) next vars k) returns)))]; Body
+      [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit 
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))
       

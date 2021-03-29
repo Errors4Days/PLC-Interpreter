@@ -228,7 +228,7 @@
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (call/cc (lambda (k)
                   (M-while expression next
-                           (M-state (list (rightoperand expression)) (cdr expression) vars k) returns)))]; Run body
+                           (M-state (list (rightoperand expression)) next vars k) returns)))]; Run body
       [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))

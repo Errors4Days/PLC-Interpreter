@@ -340,22 +340,17 @@
 (eq? (interpret "Tests/Test8") 10) ; 10
 (eq? (interpret "Tests/Test9") 5) ; 5
 (eq? (interpret "Tests/Test10") -39) ; -39
-
 ; (interpret "Tests/Test11") ; error using before declaring
 ; (interpret "Tests/Test12") ; error variable not declared
 ; (interpret "Tests/Test13") ; error using before assigning
 ; (interpret "Tests/Test14") ; error redefining variable
-
-
 (eq? (interpret "Tests/Test15") 'true) ; true
 (eq? (interpret "Tests/Test16") 100); 100
 (eq? (interpret "Tests/Test17") 'false); false
 (eq? (interpret "Tests/Test18") 'true); true
 (eq? (interpret "Tests/Test19") 128); 128
 (eq? (interpret "Tests/Test20") 12); 12 
-
 ;;; SELF MADE TEST CASES
-
 (eq? (interpret "Tests/Test30") 82)     ;output should be 82
 (eq? (interpret "Tests/Test31") 100)    ;output should be 100
 (eq? (interpret "Tests/Test32") 'true)    ;output should be 'true
@@ -367,7 +362,7 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-
+; #|
 (eq? (interpret "Tests2/Test1") 20)    ;20
 (eq? (interpret "Tests2/Test2") 164)   ;164
 (eq? (interpret "Tests2/Test3") 32)    ;32
@@ -382,7 +377,7 @@
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error
 ;(eq? (interpret "Tests2/Test14") 12)   ;12
-#|
+;#|
 (eq? (interpret "Tests2/Test15") 125)   ;125
 (eq? (interpret "Tests2/Test16") 110)  ;110
 (eq? (interpret "Tests2/Test17") 2000400)  ;2000400

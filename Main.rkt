@@ -227,7 +227,7 @@
        (M-state (cons (rightoperand expression) next) vars returns break continue throw)]
       ; Else
       [(not (null? (lastQuadruple expression)))
-       (M-state (cons (rightoperand expression) next) vars returns break continue throw)]                        
+       (M-state (cons (car (lastQuadruple expression)) next) vars returns break continue throw)]                        
       ; No else if
       [else (M-state next vars returns break continue throw)])))
 
@@ -323,20 +323,20 @@
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-;(interpret "temp.txt")
+;(parser "Tests/Test7")
 
 ; Part 1
-
-(interpret "Tests/Test1") ; 150
-(interpret "Tests/Test2") ; -4
-(interpret "Tests/Test3") ; 10
-(interpret "Tests/Test4") ; 16
-(interpret "Tests/Test5") ; 220
-(interpret "Tests/Test6") ; 5
-(interpret "Tests/Test7") ; 6
-(interpret "Tests/Test8") ; 10
-(interpret "Tests/Test9") ; 5
-(interpret "Tests/Test10") ; -39
+#|
+(eq? (interpret "Tests/Test1") 150) ; 150
+(eq? (interpret "Tests/Test2") -4) ; -4
+(eq? (interpret "Tests/Test3") 10) ; 10
+(eq? (interpret "Tests/Test4") 16) ; 16
+(eq? (interpret "Tests/Test5") 220) ; 220
+(eq? (interpret "Tests/Test6") 5) ; 5
+(eq? (interpret "Tests/Test7") 6) ; 6
+(eq? (interpret "Tests/Test8") 10) ; 10
+(eq? (interpret "Tests/Test9") 5) ; 5
+(eq? (interpret "Tests/Test10") -39) ; -39
 
 ; (interpret "Tests/Test11") ; error using before declaring
 ; (interpret "Tests/Test12") ; error variable not declared
@@ -344,24 +344,24 @@
 ; (interpret "Tests/Test14") ; error redefining variable
 
 
-(interpret "Tests/Test15") ; true
-(interpret "Tests/Test16") ; 100
-(interpret "Tests/Test17") ; false
-(interpret "Tests/Test18") ; true
-(interpret "Tests/Test19") ; 128
-(interpret "Tests/Test20") ; 12 
+(eq? (interpret "Tests/Test15") 'true) ; true
+(eq? (interpret "Tests/Test16") 100); 100
+(eq? (interpret "Tests/Test17") 'false); false
+(eq? (interpret "Tests/Test18") 'true); true
+(eq? (interpret "Tests/Test19") 128); 128
+(eq? (interpret "Tests/Test20") 12); 12 
 
 ;;; SELF MADE TEST CASES
 
-(interpret "Tests/Test30")     ;output should be 82
-(interpret "Tests/Test31")     ;output should be 100
-(interpret "Tests/Test32")     ;output should be 'true
-(interpret "Tests/Test33")     ;output should be 'false
-(interpret "Tests/Test34")     ;output should be 107
-(interpret "Tests/Test35")     ;output should be 0
+(eq? (interpret "Tests/Test30") 82)     ;output should be 82
+(eq? (interpret "Tests/Test31") 100)    ;output should be 100
+(eq? (interpret "Tests/Test32") 'true)    ;output should be 'true
+(eq? (interpret "Tests/Test33") 'false)    ;output should be 'false
+(eq? (interpret "Tests/Test34") 107)    ;output should be 107
+(eq? (interpret "Tests/Test35") 0)   ;output should be 0
 ; (interpret "Tests/Test36")    ;throws error undeclared
 ; (interpret "Tests/Test37")    ;throws error invalid if
-(interpret "Tests/Test38")     ;output should be 100 |#
+(eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
 #|

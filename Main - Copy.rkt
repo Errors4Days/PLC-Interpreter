@@ -238,7 +238,19 @@
       [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit 
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))
-      
+
+(define M-try-catch
+  (lambda (expression outer vars returns)
+    (cond
+      [(M-state (cadr expression) outer vars returns)
+       (M-try-catch (cadddr expression) outer vars returns)] ;try is true - finally
+      [(not (M-state (cadr expression) outer vars returns))
+       (M-try-catch (caddr expression) outer vars returns)] ;try is false - catch
+      ;[()] ; finally
+      ;[()] ; catch
+      ;[()] ; throw
+      [else (error 'idk-yet)]))) ;else
+
 ; Passes the expression into the correct function for evaluation
 (define M-evaluate
   (lambda (expression vars)
@@ -294,7 +306,12 @@
       [(eq? (operator (nextExecute expression)) 'break)
        (returns (M-state outer '() (cdr vars) returns))]
       [(eq? (operator (nextExecute expression)) 'continue)
-       vars])))
+       vars]
+       [(eq? (operator (nextExecute expression)) 'try)
+       (M-try-catch (nextExecute expression) (remainderExpression expression) vars returns) ]
+      [(eq? (operator (nextExecute expression)) 'throw)
+       error 'e]
+      [else (error 'function-not-recognized-by-interpreter)])))
 
 ;;; *******************************
 ;;; INTERPRETER FUNCTION

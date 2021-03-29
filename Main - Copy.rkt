@@ -204,20 +204,20 @@
 ; if statements
 ; '(if (> x y) (return x)
 (define M-if
-  (lambda (expression next vars returns)
+  (lambda (expression next outer vars returns)
     (cond
       [(and (eq? (operator expression) 'if) (M-evaluate (leftoperand expression) vars))
-       (M-if (rightoperand expression) next vars returns)] ; if condition is true, run body
+       (M-if (rightoperand expression) next outer vars returns)] ; if condition is true, run body
       [(and (eq? (operator expression) 'if) (null? (lastQuadruple expression)))
-       (M-state next vars returns)]                        ; No else statement
+       (M-state next outer vars returns)]                        ; No else statement
       [(eq? (operator expression) 'if)
-       (M-if (cadddr expression) next vars returns)]       ; Run else/ else if
+       (M-if (cadddr expression) next outer vars returns)]       ; Run else/ else if
       [(eq? (operator expression) 'return)
        (M-return (cadr expression) vars returns)]                ; Runs return function
       [(eq? (operator expression) '=)
-       (M-state next (M-assign expression vars) returns)]  ; Executes variable assignment values
+       (M-state next outer (M-assign expression vars) returns)]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
-       (M-state next (M-begin (cdr expression) vars returns) returns)] ; Runs a bracket
+       (M-state next outer (M-begin (cdr expression) outer vars returns) returns)] ; Runs a bracket
       [else (error 'invalid-if-statement)])))
 
 ; while statements
@@ -228,8 +228,8 @@
       [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
        (call/cc (lambda (k)
                   (M-while expression next
-                           (M-state (list (rightoperand expression)) vars k) returns)))]; Run body
-      [(eq? (operator expression) 'while) (M-state next vars returns)]                  ; Exit loop
+                           (M-state (list (rightoperand expression)) (cdr expression) vars k) returns)))]; Run body
+      [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit loop
       [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
       [else (error 'invalid-while-loop)])))
       
@@ -259,31 +259,33 @@
 
 ; Runs the bracket code and discards the lowest layer
 (define M-begin
-  (lambda (expression vars returns)
+  (lambda (expression outer vars returns)
     (cond
-      [(eq? (operator expression) 'begin) (M-begin (cdr expression) vars returns)]
-      [else (cdr (M-state expression (cons (box '(()())) vars) returns))])))
+      [(eq? (operator expression) 'begin) (M-begin (cdr expression) outer vars returns)]
+      [else (cdr (M-state expression outer (cons (box '(()())) vars) returns))])))
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
-  (lambda (expression vars returns)
+  (lambda (expression outer vars returns)
     (cond
       [(null? expression) vars]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'var)
-       (M-state (remainderExpression expression) (M-declare (nextExecute expression) vars) returns)]
+       (M-state (remainderExpression expression) outer
+                (M-declare (nextExecute expression) vars) returns)]
       [(eq? (operator (nextExecute expression)) '=)
-       (M-state (remainderExpression expression) (M-assign (nextExecute expression) vars) returns)]
+       (M-state (remainderExpression expression) outer
+                (M-assign (nextExecute expression) vars) returns)]
       [(eq? (operator (nextExecute expression)) 'if)
-       (M-if (nextExecute expression) (remainderExpression expression) vars returns)]
+       (M-if (nextExecute expression) (remainderExpression expression) outer vars returns)]
       [(eq? (operator (nextExecute expression)) 'while)
        (M-while (nextExecute expression)(remainderExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'begin)
-       (M-state (remainderExpression expression)
-                (M-begin (nextExecute expression) vars returns) returns)]
+       (M-state (remainderExpression expression) outer
+                (M-begin (nextExecute expression) outer vars returns) returns)]
       [(eq? (operator (nextExecute expression)) 'break)
-       (returns (cdr vars))])))
+       (returns (M-state outer '() (cdr vars) returns))])))
 
 
 ;;; *******************************
@@ -293,7 +295,7 @@
   (lambda (filename)
     (call/cc
      (lambda (returns)
-       (M-state (parser filename) (list (box '(()()))) returns)))))
+       (M-state (parser filename) '() (list (box '(()()))) returns)))))
 
 
 ;;; *******************************

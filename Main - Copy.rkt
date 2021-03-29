@@ -233,17 +233,21 @@
 
 ; while statements
 ; '(while (!= (% y x) 3) (= y (+ y 1)))
-(define M-while
-  (lambda (expression next vars returns)
+(define M-while-helper
+  (lambda (expression next vars returns break continue throw)
     (cond
-      [(and (eq? (operator expression) 'while) (M-evaluate (leftoperand expression) vars))
-       (call/cc (lambda (k)
-                  (M-while expression next
-                           (M-state (list (rightoperand expression)) next vars k) returns)))]; Body
-      [(eq? (operator expression) 'while) (M-state next '() vars returns)]                  ; Exit 
-      [(eq? (operator expression) '=) (M-assign expression vars)] ; Body has assignment, runs assign
-      [else (error 'invalid-while-loop)])))
-
+         [(not (boolean? (M-evaluate (leftoperand expression) vars)))
+          (error 'invalid-while-loop)]
+         ; Enter while body
+         [(M-evaluate (leftoperand expression) vars)
+          (M-state (cons (rightoperand expression) (cons expression next)) '() vars returns break continue throw)]
+         ; Exit while body
+         [else (M-state next '() vars returns break continue throw)])))
+(define M-while
+  (lambda (expression next vars returns break continue throw)
+    (call/cc
+     (lambda (k)
+       (M-while-helper expression next vars returns k continue throw)))))
 
 (define M-try-catch
   (lambda (expression outer vars returns)
@@ -266,7 +270,7 @@
       [(number? expression) (returns expression)] ; Given a number
       [(or (eq? expression #t) (eq? expression 'true)) (returns 'true)] ; Given a boolean
       [(or (eq? expression #f) (eq? expression 'false)) (returns 'false)] ; Given a boolean
-      [else (M-return (getValue expression vars) vars returns)]))) ; Given a variable
+      [else (returns (getValue expression vars))]))) ; Given a variable
 
 ; Runs the bracket code and discards the lowest layer
 (define M-begin
@@ -285,10 +289,10 @@
        (M-return (getExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'var)
        (M-state (remainderExpression expression) outer
-                (M-declare (nextExecute expression) vars) returns)]
+                (M-declare (nextExecute expression) vars) returns break continue throw)]
       [(eq? (operator (nextExecute expression)) '=)
        (M-state (remainderExpression expression) outer
-                (M-assign (nextExecute expression) vars) returns)]
+                (M-assign (nextExecute expression) vars) returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'if)
        (M-if (nextExecute expression) (remainderExpression expression) outer vars returns)]
       [(eq? (operator (nextExecute expression)) 'while)
@@ -299,7 +303,7 @@
       [(eq? (operator (nextExecute expression)) 'break)
        (returns (M-state outer '() (cdr vars) returns))]
       [(eq? (operator (nextExecute expression)) 'continue)
-       vars]
+       (continue vars)]
        [(eq? (operator (nextExecute expression)) 'try)
        (M-try-catch (nextExecute expression) (remainderExpression expression) vars returns) ]
       [(eq? (operator (nextExecute expression)) 'throw)

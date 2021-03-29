@@ -217,7 +217,7 @@
       [(eq? (operator expression) '=)
        (M-state next outer (M-assign expression vars) returns)]  ; Executes variable assignment values
       [(eq? (operator expression) 'begin)
-       (M-state next outer (M-begin (cdr expression) outer vars returns) returns)] ; Runs a bracket
+       (M-state next outer (M-begin expression outer vars returns) returns)] ; Runs a bracket
       [(eq? (operator expression) 'break)
        (M-state '((break)) outer vars returns)]
        [(eq? (operator expression) 'continue)
@@ -272,8 +272,8 @@
 (define M-state
   (lambda (expression outer vars returns)
     (cond
-      [(and (null? expression) (null? vars) (null? outer)) (error 'break-not-in-loop)]
       [(null? expression) vars]
+      [(and (null? expression) (null? vars) (null? outer)) (error 'break-not-in-loop)]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'var)
@@ -285,7 +285,7 @@
       [(eq? (operator (nextExecute expression)) 'if)
        (M-if (nextExecute expression) (remainderExpression expression) outer vars returns)]
       [(eq? (operator (nextExecute expression)) 'while)
-       (M-while (nextExecute expression) (remainderExpression expression) vars returns)]
+       (M-while (nextExecute expression)(remainderExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression) outer
                 (M-begin (nextExecute expression) outer vars returns) returns)]
@@ -348,8 +348,8 @@
 (interpret "Tests/Test38")     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-
-#|(interpret "Tests2/Test1")    ;20
+#|
+(interpret "Tests2/Test1")    ;20
 (interpret "Tests2/Test2")    ;164
 (interpret "Tests2/Test3")    ;32
 (interpret "Tests2/Test4")    ;2
@@ -358,11 +358,11 @@
 (interpret "Tests2/Test7")    ;21
 (interpret "Tests2/Test8")    ;6
 (interpret "Tests2/Test9")    ;-1 |#
-;(interpret "Tests2/Test10")  ;789
+(interpret "Tests2/Test10")  ;789
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
-(interpret "Tests2/Test13")   ;Error
-(interpret "Tests2/Test14")   ;12
+;(interpret "Tests2/Test13")   ;Error
+;(interpret "Tests2/Test14")   ;12
 #|(interpret "Tests2/Test15")   ;125
 (interpret "Tests2/Test16")   ;110
 (interpret "Tests2/Test17")   ;2000400

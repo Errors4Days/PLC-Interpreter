@@ -272,6 +272,7 @@
 (define M-state
   (lambda (expression outer vars returns)
     (cond
+      [(and (null? expression) (null? vars) (null? outer)) (error 'break-not-in-loop)]
       [(null? expression) vars]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars returns)]
@@ -284,7 +285,7 @@
       [(eq? (operator (nextExecute expression)) 'if)
        (M-if (nextExecute expression) (remainderExpression expression) outer vars returns)]
       [(eq? (operator (nextExecute expression)) 'while)
-       (M-while (nextExecute expression)(remainderExpression expression) vars returns)]
+       (M-while (nextExecute expression) (remainderExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'begin)
        (M-state (remainderExpression expression) outer
                 (M-begin (nextExecute expression) outer vars returns) returns)]

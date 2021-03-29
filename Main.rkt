@@ -243,6 +243,7 @@
           (M-state (cons (rightoperand expression) (cons expression next)) vars returns break continue throw)]
          ; Exit while body
          [else (M-state next vars returns break continue throw)])))
+
 (define M-while
   (lambda (expression next vars returns break continue throw)
     (call/cc
@@ -303,9 +304,9 @@
        (M-state (remainderExpression expression)
                 (M-begin (nextExecute expression) vars returns break continue throw)
                 returns break continue throw)]
-      #|
       [(eq? (operator (nextExecute expression)) 'break)
-       (returns (M-state outer '() (cdr vars) returns))]
+       (break (M-state '() (cdr vars) returns break continue throw))] ;(cdr vars) here?
+      #|
       [(eq? (operator (nextExecute expression)) 'continue)
        (continue vars)]
        [(eq? (operator (nextExecute expression)) 'try)
@@ -367,16 +368,17 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-
+#|
 (eq? (interpret "Tests2/Test1") 20)    ;20
 (eq? (interpret "Tests2/Test2") 164)   ;164
 (eq? (interpret "Tests2/Test3") 32)    ;32
 (eq? (interpret "Tests2/Test4") 2)     ;2
 ;(interpret "Tests2/Test5")    ;Error
 (eq? (interpret "Tests2/Test6") 25)    ;25
-(eq? (interpret "Tests2/Test7") 21)    ;21
-(eq? (interpret "Tests2/Test8") 6)     ;6
-(eq? (interpret "Tests2/Test9") -1)    ;-1 |#
+(eq? (interpret "Tests2/Test7") 21)    ;21|#
+;(eq? (interpret "Tests2/Test8") 6)     ;6
+(eq? (interpret "Tests2/Test9") -1)    ;-1
+(interpret "Tests2/Test9")
 ;(eq? (interpret "Tests2/Test10") 789)  ;789
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
   #lang racket
   ; Elizabeth Shumaker and Justin Lee
   ; TODO:
@@ -160,6 +161,172 @@
         [(eq? (operator expression) '/) (quotient (M-integer (left_val expression vars) vars)
                                                   (M-integer (right_val expression vars) vars))]
         [(eq? (operator expression) '%) (modulo (M-integer (left_val expression vars) vars)
+=======
+#lang racket
+; Elizabeth Shumaker and Justin Lee
+; Issues unfixed for submissions:
+; Test 10 did not run properly. There was some in proper manipulation of y in the middle block. The
+; source of this error hasn't been located. 
+; Test 13 and Test 19 don't throw errors. With more time these errors would have been caught
+; Only portions of try catch currently work. The catch component doesn't work, but try and finally
+; work.
+
+(require "simpleParser.rkt")
+;;; *******************************
+;;; ABSTRACTION/HELPERS
+;;; *******************************
+(define operator car)
+(define leftoperand cadr)
+(define rightoperand caddr)
+(define getExpression cadar)
+
+(define operands cdr)
+(define lastTriple cddr)
+(define lastQuadruple cdddr)
+(define nextExecute car)
+(define remainderExpression cdr)
+
+(define popLayer cdr)
+(define addLayer
+  (lambda (vars)
+    (cons (box '(()())) vars)))
+
+(define tryBody cadr)
+(define catchBody caddr)
+(define finallyBody cadddr)
+
+;combines int_val and leftoperand because of it's frequency in code
+(define left_val
+  (lambda (val vars)
+    (int_val (leftoperand val) vars)))
+
+;combines int_val and rightoperand because of it's frequency in code
+(define right_val
+  (lambda (val vars)
+    (int_val (rightoperand val) vars)))
+
+; Checks if an atom is in a list
+(define member*?
+  (lambda (a lis)
+    (cond
+      [(null? lis) #f]
+      [(pair? (car lis)) (or (member*? a (car lis))
+                             (member*? a (cdr lis)))]
+      [(eq? a (car lis)) #t]
+      [else (member*? a (cdr lis))])))
+
+; Checks if a var is declared within the entire stack of vars
+(define declare?
+  (lambda (aVar vars)
+    (cond
+      [(null? vars) #f]
+      [(member*? aVar (unbox (car vars))) #t]
+      [else (declare? aVar (cdr vars))])))
+; Checks if a var is declared on the most recent layer
+(define declareStack?
+  (lambda (aVar vars)
+    (cond
+      [(null? vars) #f]
+      [(member*? aVar (unbox (car vars))) #t]
+      [else #f])))
+
+; Replaces a specified variable's value with a new value. The variable must
+; have already been declared before this point
+(define insert-cps
+  (lambda (var value varlis valuelis return)
+    (cond
+      ;[(null? varlis) (error 'variable-not-declared)]
+      [(null? value) (error 'cannot-assign-null-to-a-variable)]
+      [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
+      [else (insert-cps var value (cdr varlis) (cdr valuelis)
+                        (lambda (v) (return (cons (car valuelis) v))))])))
+
+; Iterates through the entire stack of variable layers and uses insert-cps on each layer until
+; one of the values contains the sought after variable
+(define insert
+  (lambda (var value lis)
+    (cond
+      [(null? lis) (error 'variable-not-declared)]
+      [(declareStack? var lis) (insert-cps var value (car (unbox (car lis))) (cadr (unbox (car lis)))
+                                           (lambda (v) (cons (box (cons (car
+                                                                         (unbox (car lis)))
+                                                                        (list v))) (cdr lis))))]
+      [else (cons (car lis) (insert var value (cdr lis)))])))
+       
+; Get variable value from a list of variables and values
+(define getValue
+  (lambda (varA vars)
+    (cond
+      [(null? vars) (error 'variable-not-declared)]
+      [(not (null? (getValue-helper varA (unbox (car vars)))))
+       (getValue-helper varA (unbox (car vars)))]
+      [else (getValue varA (cdr vars))])))
+
+; Finds a variable in a list of variable names
+(define getValue-helper
+  (lambda (varName lis)
+    (cond
+      [(null? (car lis)) '()]
+      [(and (eq? varName (caar lis)) (null? (caadr lis)))
+       (error 'variable-not-assigned)]
+      [(eq? varName (caar lis)) (caadr lis)]
+      [else (getValue-helper varName (mymap-caller cdr lis))])))
+
+; Applies a function on all elements of a 2d list using cps
+(define mymap
+  (lambda (func lis return)
+    (if (null? lis)
+        (return '())
+        (mymap func (cdr lis) (lambda (v) (return (append (cons (func (car lis)) '()) v)))))))
+(define mymap-caller
+  (lambda (func lis)
+    (mymap func lis (lambda (v) v))))
+
+; Takes in variable or value and returns a value
+(define int_val
+  (lambda (val vars)
+    (cond
+      [(number? val) val]
+      [(declare? val vars)(getValue val vars)]
+      [else val])))
+; Takes two atoms and returns them in a list
+(define listMaker
+  (lambda (a b)
+    (cons a (cons b '()))))
+
+
+;;; *******************************
+;;; MAIN OPERATORS
+;;; *******************************
+; Passes the expression into the correct function for evaluation
+(define M-evaluate
+  (lambda (expression vars)
+    (cond
+      [(or (eq? expression 'false) (eq? expression 'true)) (M-bool expression vars)] ; Single boolean
+      [(and (not (list? expression)) (number? expression)) expression]
+      [(and (not (list? expression)) (boolean? expression)) expression]
+      [(not (list? expression)) (getValue expression vars)] ; atom that is a variable or value
+      [(member*? (operator expression) '(+ - * / %)) (M-integer expression vars)] ; Math expression
+      [(member*? (operator expression) '(== != < > <= >=)) (M-compare expression vars)] ; Comparison
+      [(member*? (operator expression) '( && || !)) (M-bool expression vars)] ; Boolean expression
+      [else (error 'no-valid-operator)])))
+
+; M-integer maps expressions to integer values
+; operators: +, -, *, /, %
+(define M-integer
+  (lambda (expression vars)
+    (cond
+      [(number? expression) expression]
+      [(and (null? (lastTriple expression)) (eq? (operator expression) '-))
+       (- 0 (M-integer (left_val expression vars) vars))]
+      [(eq? (operator expression) '+) (+ (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '-) (- (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '*) (* (M-integer (left_val expression vars) vars)
+                                         (M-integer (right_val expression vars) vars))]
+      [(eq? (operator expression) '/) (quotient (M-integer (left_val expression vars) vars)
+>>>>>>> c21550f2a08d50b1c74259d06f885445c99bdf72
                                                 (M-integer (right_val expression vars) vars))]
         [else (error 'bad-math-operator)])))
 

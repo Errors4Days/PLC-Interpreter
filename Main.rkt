@@ -242,7 +242,8 @@
          [(M-evaluate (leftoperand expression) vars)
           (M-state (cons expression next)
           (call/cc (lambda (k)
-          (M-state (cons (rightoperand expression) (cons expression next)) vars returns break k throw)))
+          (M-state (cons (rightoperand expression) (cons expression next))
+                   vars returns break k throw)))
                      returns break continue throw)]
          ; Exit while body
          [else (M-state next vars returns break continue throw)])))
@@ -256,23 +257,39 @@
              returns break continue throw)))
 
 (define M-try-catch
-  (lambda (expression outer vars returns)
+  (lambda (expression next vars returns break continue throw)
     (cond
-      [(M-state (cadr expression) outer vars returns)
-       (M-try-catch (cadddr expression) outer vars returns)] ;try is true - finally
-      [(not (M-state (cadr expression) outer vars returns))
-       (M-try-catch (caddr expression) outer vars returns)] ;try is false - catch
-      ;[()] ; finally
-      ;[()] ; catch
-      ;[()] ; throw
-      [else (error 'idk-yet)]))) ;else
+      ; Only a try
+      [(and (null? cddr)(null? cdddr))
+       (M-try-catch-helper expression next vars returns break continue throw 1)]
+      ; Try and a catch
+      [(null? (cadddr expression))
+       (M-try-catch-helper expression next vars returns break continue throw 2)]
+      ; Try and a finally
+      [(null? (cadddr expression))
+       (M-try-catch-helper expression next vars returns break continue throw 3)]
+      ; Try, catch, finally
+      [else
+       (M-try-catch-helper expression next vars returns break continue throw 4)])))
+
+(define M-try-catch-helper
+  (lambda (expression next vars returns break continue throw option)
+    (lambda (k)
+    (cond
+      [(eq? option 1) '(1)]
+      [(eq? option 2) '(2)]
+      [(eq? option 3) '(3)]
+      [(eq? option 4)
+       (lambda (k) (call/cc
+                    (M-state (cons (cadddr expression) next) vars
+                returns break continue throw)))])))
 
 ; Returns a value or boolean
 ; '(M-return 'x)
 (define M-return
   (lambda (expression vars returns)
     (cond
-      [(list? expression) (M-return (M-evaluate expression vars) vars returns)] ; Expression not evaluated
+      [(list? expression) (M-return (M-evaluate expression vars) vars returns)] ; Evaluate expression
       [(number? expression) (returns expression)] ; Given a number
       [(or (eq? expression #t) (eq? expression 'true)) (returns 'true)] ; Given a boolean
       [(or (eq? expression #f) (eq? expression 'false)) (returns 'false)] ; Given a boolean
@@ -310,14 +327,14 @@
                 (M-begin (nextExecute expression) vars returns break continue throw)
                 returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'break)
-       (break (cdr vars))] ;(cdr vars) here?
+       (break (cdr vars))]
       [(eq? (operator (nextExecute expression)) 'continue)
-       (continue vars)]
-      #|
+       (continue (cdr vars))]
        [(eq? (operator (nextExecute expression)) 'try)
-       (M-try-catch (nextExecute expression) (remainderExpression expression) vars returns) ]
-      [(eq? (operator (nextExecute expression)) 'throw)
-       error 'e]|#
+       (M-try-catch (nextExecute expression) (remainderExpression expression)
+                    vars returns break continue throw)]
+       [(eq? (operator (nextExecute expression)) 'throw)
+       (throw (cdr (rightoperand expression)))]
       [else (error 'function-not-recognized-by-interpreter)])))
 
 ;;; *******************************
@@ -375,17 +392,19 @@
 (eq? (interpret "Tests2/Test4") 2)     ;2
 ;(interpret "Tests2/Test5")    ;Error
 (eq? (interpret "Tests2/Test6") 25)    ;25
-(eq? (interpret "Tests2/Test7") 21)    ;21|#
+(eq? (interpret "Tests2/Test7") 21)    ;21
 (eq? (interpret "Tests2/Test8") 6)     ;6
-(eq? (interpret "Tests2/Test9") -1)    ;-1
-(eq? (interpret "Tests2/Test10") 789)  ;789
-(interpret "Tests2/Test10")
+(eq? (interpret "Tests2/Test9") -1)    ;-1 |#
+;(eq? (interpret "Tests2/Test10") 789)  ;789
+;(interpret "Tests2/Test10")
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error
 ;(eq? (interpret "Tests2/Test14") 12)   ;12
-#|
+
 (eq? (interpret "Tests2/Test15") 125)   ;125
+(interpret "Tests2/Test15")
+#|
 (eq? (interpret "Tests2/Test16") 110)  ;110
 (eq? (interpret "Tests2/Test17") 2000400)  ;2000400
 (eq? (interpret "Tests2/Test18") 101)  ;101

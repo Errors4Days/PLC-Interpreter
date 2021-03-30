@@ -282,7 +282,7 @@
       [(eq? option 4)
        (lambda (k) (call/cc
                     (M-state (cons (cadddr expression) next) vars
-                returns break continue throw)))])))
+                returns break continue throw)))]))))
 
 ; Returns a value or boolean
 ; '(M-return 'x)

@@ -218,18 +218,18 @@
 ; if statements
 ; '(if (> x y) (return x)
 (define M-if
-  (lambda (expression next outer vars returns break continue throw)
+  (lambda (expression next vars returns break continue throw)
     (cond
       [(not (boolean? (M-evaluate (leftoperand expression) vars)))
        (error 'invalid-if-statement-condition)]
       ; Condition true
       [(M-evaluate (leftoperand expression) vars)
-       (M-state (cons (rightoperand expression) next) outer vars returns break continue throw)]
+       (M-state (cons (rightoperand expression) next) vars returns break continue throw)]
       ; Else
-      [(null? (lastQuadruple expression))
-       (M-state (cons (rightoperand expression) next) vars)]                        
+      [(not (null? (lastQuadruple expression)))
+       (M-state (cons (car (lastQuadruple expression)) next) vars returns break continue throw)]                        
       ; No else if
-      [else (M-state next outer vars returns break continue throw)])))
+      [else (M-state next vars returns break continue throw)])))
 
 ; while statements
 ; '(while (!= (% y x) 3) (= y (+ y 1)))
@@ -240,147 +240,170 @@
           (error 'invalid-while-loop)]
          ; Enter while body
          [(M-evaluate (leftoperand expression) vars)
-          (M-state (cons (rightoperand expression) (cons expression next)) '() vars returns break continue throw)]
+          (M-state (cons expression next)
+          (call/cc (lambda (k)
+          (M-state (cons (rightoperand expression) (cons expression next))
+                   vars returns break k throw)))
+                     returns break continue throw)]
          ; Exit while body
-         [else (M-state next '() vars returns break continue throw)])))
+         [else (M-state next vars returns break continue throw)])))
+
 (define M-while
   (lambda (expression next vars returns break continue throw)
-    (call/cc
-     (lambda (k)
-       (M-while-helper expression next vars returns k continue throw)))))
+    (M-state next
+             (call/cc
+              (lambda (k)
+                (M-while-helper expression next vars returns k continue throw)))
+             returns break continue throw)))
 
 (define M-try-catch
-  (lambda (expression outer vars returns)
+  (lambda (expression next vars returns break continue throw)
     (cond
-      [(M-state (cadr expression) outer vars returns)
-       (M-try-catch (cadddr expression) outer vars returns)] ;try is true - finally
-      [(not (M-state (cadr expression) outer vars returns))
-       (M-try-catch (caddr expression) outer vars returns)] ;try is false - catch
-      ;[()] ; finally
-      ;[()] ; catch
-      ;[()] ; throw
-      [else (error 'idk-yet)]))) ;else
+      ; Only a try
+      [(and (null? cddr)(null? cdddr))
+       (M-try-catch-helper expression next vars returns break continue throw 1)]
+      ; Try and a catch
+      [(null? (cadddr expression))
+       (M-try-catch-helper expression next vars returns break continue throw 2)]
+      ; Try and a finally
+      [(null? (cadddr expression))
+       (M-try-catch-helper expression next vars returns break continue throw 3)]
+      ; Try, catch, finally
+      [else
+       (M-try-catch-helper expression next vars returns break continue throw 4)])))
+
+(define M-try-catch-helper
+  (lambda (expression next vars returns break continue throw option)
+    (lambda (k)
+    (cond
+      [(eq? option 1) '(1)]
+      [(eq? option 2) '(2)]
+      [(eq? option 3) '(3)]
+      [(eq? option 4)
+       (lambda (k) (call/cc
+                    (M-state (cons (cadddr expression) next) vars
+                returns break continue throw)))]))))
 
 ; Returns a value or boolean
 ; '(M-return 'x)
 (define M-return
   (lambda (expression vars returns)
     (cond
-      [(list? expression) (M-return (M-evaluate expression vars) vars returns)] ; Expression not evaluated
+      [(list? expression) (M-return (M-evaluate expression vars) vars returns)] ; Evaluate expression
       [(number? expression) (returns expression)] ; Given a number
       [(or (eq? expression #t) (eq? expression 'true)) (returns 'true)] ; Given a boolean
       [(or (eq? expression #f) (eq? expression 'false)) (returns 'false)] ; Given a boolean
-      [else (returns (getValue expression vars))]))) ; Given a variable
+      [else (M-return (getValue expression vars) vars returns)]))) ; Given a variable
 
 ; Runs the bracket code and discards the lowest layer
 (define M-begin
-  (lambda (expression outer vars returns)
+  (lambda (expression vars returns break continue throw)
     (cond
-      [(eq? (operator expression) 'begin) (M-begin (cdr expression) outer vars returns)]
-      [else (cdr (M-state expression outer (cons (box '(()())) vars) returns))])))
+      [(eq? (operator expression) 'begin)
+       (M-begin (cdr expression) vars returns break continue throw)]
+      [else (cdr (M-state expression
+                          (cons (box '(()())) vars) returns break continue throw))])))
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
-  (lambda (expression outer vars returns break continue throw)
+  (lambda (expression vars returns break continue throw)
     (cond
+      [(and (null? expression) (null? vars)) (error 'break-not-in-loop)]
       [(null? expression) vars]
-      [(and (null? expression) (null? vars) (null? outer)) (error 'break-not-in-loop)]
       [(eq? (operator (nextExecute expression)) 'return)
        (M-return (getExpression expression) vars returns)]
       [(eq? (operator (nextExecute expression)) 'var)
-       (M-state (remainderExpression expression) outer
+       (M-state (remainderExpression expression)
                 (M-declare (nextExecute expression) vars) returns break continue throw)]
       [(eq? (operator (nextExecute expression)) '=)
-       (M-state (remainderExpression expression) outer
+       (M-state (remainderExpression expression)
                 (M-assign (nextExecute expression) vars) returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'if)
-       (M-if (nextExecute expression) (remainderExpression expression) outer vars returns)]
+       (M-if (nextExecute expression) (remainderExpression expression) vars returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'while)
-       (M-while (nextExecute expression)(remainderExpression expression) vars returns)]
+       (M-while (nextExecute expression)(remainderExpression expression) vars returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'begin)
-       (M-state (remainderExpression expression) outer
-                (M-begin (nextExecute expression) outer vars returns) returns)]
+       (M-state (remainderExpression expression)
+                (M-begin (nextExecute expression) vars returns break continue throw)
+                returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'break)
-       (returns (M-state outer '() (cdr vars) returns))]
+       (break (cdr vars))]
       [(eq? (operator (nextExecute expression)) 'continue)
        (continue vars)]
        [(eq? (operator (nextExecute expression)) 'try)
-       (M-try-catch (nextExecute expression) (remainderExpression expression) vars returns) ]
-      [(eq? (operator (nextExecute expression)) 'throw)
-       error 'e]
+       (M-try-catch (nextExecute expression) (remainderExpression expression)
+                    vars returns break continue throw)]
+       [(eq? (operator (nextExecute expression)) 'throw)
+       (throw (cdr (rightoperand expression)))]
       [else (error 'function-not-recognized-by-interpreter)])))
 
 ;;; *******************************
 ;;; INTERPRETER FUNCTION
 ;;; *******************************
-(parser "Tests/Test17")
 (define interpret
   (lambda (filename)
     (call/cc
      (lambda (returns)
-       (M-state (parser filename) '() (list (box '(()()))) returns '() '() '())))))
+       (M-state (parser filename) (list (box '(()()))) returns '() '() '())))))
 
 ;;; *******************************
 ;;; Provided Test Cases
 ;;; *******************************
-;(interpret "temp.txt")
+;(parser "Tests/Test7")
 
 ; Part 1
 #|
-(interpret "Tests/Test1") ; 150
-(interpret "Tests/Test2") ; -4
-(interpret "Tests/Test3") ; 10
-(interpret "Tests/Test4") ; 16
-(interpret "Tests/Test5") ; 220
-(interpret "Tests/Test6") ; 5
-(interpret "Tests/Test7") ; 6
-(interpret "Tests/Test8") ; 10
-(interpret "Tests/Test9") ; 5
-(interpret "Tests/Test10") ; -39 |#
-
+(eq? (interpret "Tests/Test1") 150) ; 150
+(eq? (interpret "Tests/Test2") -4) ; -4
+(eq? (interpret "Tests/Test3") 10) ; 10
+(eq? (interpret "Tests/Test4") 16) ; 16
+(eq? (interpret "Tests/Test5") 220) ; 220
+(eq? (interpret "Tests/Test6") 5) ; 5
+(eq? (interpret "Tests/Test7") 6) ; 6
+(eq? (interpret "Tests/Test8") 10) ; 10
+(eq? (interpret "Tests/Test9") 5) ; 5
+(eq? (interpret "Tests/Test10") -39) ; -39
 ; (interpret "Tests/Test11") ; error using before declaring
 ; (interpret "Tests/Test12") ; error variable not declared
 ; (interpret "Tests/Test13") ; error using before assigning
 ; (interpret "Tests/Test14") ; error redefining variable
-
-#|
-(interpret "Tests/Test15") ; true
-(interpret "Tests/Test16") ; 100
-(interpret "Tests/Test17") ; false
-(interpret "Tests/Test18") ; true
-(interpret "Tests/Test19") ; 128
-(interpret "Tests/Test20") ; 12 |#
-
+(eq? (interpret "Tests/Test15") 'true) ; true
+(eq? (interpret "Tests/Test16") 100); 100
+(eq? (interpret "Tests/Test17") 'false); false
+(eq? (interpret "Tests/Test18") 'true); true
+(eq? (interpret "Tests/Test19") 128); 128
+(eq? (interpret "Tests/Test20") 12); 12 
 ;;; SELF MADE TEST CASES
-#|
-(interpret "Tests/Test30")     ;output should be 82
-(interpret "Tests/Test31")     ;output should be 100
-(interpret "Tests/Test32")     ;output should be 'true
-(interpret "Tests/Test33")     ;output should be 'false
-(interpret "Tests/Test34")     ;output should be 107
-(interpret "Tests/Test35")     ;output should be 0
+(eq? (interpret "Tests/Test30") 82)     ;output should be 82
+(eq? (interpret "Tests/Test31") 100)    ;output should be 100
+(eq? (interpret "Tests/Test32") 'true)    ;output should be 'true
+(eq? (interpret "Tests/Test33") 'false)    ;output should be 'false
+(eq? (interpret "Tests/Test34") 107)    ;output should be 107
+(eq? (interpret "Tests/Test35") 0)   ;output should be 0
 ; (interpret "Tests/Test36")    ;throws error undeclared
 ; (interpret "Tests/Test37")    ;throws error invalid if
-(interpret "Tests/Test38")     ;output should be 100 |#
+(eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
 #|
-(interpret "Tests2/Test1")    ;20
-(interpret "Tests2/Test2")    ;164
-(interpret "Tests2/Test3")    ;32
-(interpret "Tests2/Test4")    ;2
+(eq? (interpret "Tests2/Test1") 20)    ;20
+(eq? (interpret "Tests2/Test2") 164)   ;164
+(eq? (interpret "Tests2/Test3") 32)    ;32
+(eq? (interpret "Tests2/Test4") 2)     ;2
 ;(interpret "Tests2/Test5")    ;Error
-(interpret "Tests2/Test6")    ;25
-(interpret "Tests2/Test7")    ;21
-(interpret "Tests2/Test8")    ;6
-(interpret "Tests2/Test9")    ;-1 |#
-;(interpret "Tests2/Test10")  ;789
+(eq? (interpret "Tests2/Test6") 25)    ;25
+(eq? (interpret "Tests2/Test7") 21)    ;21
+(eq? (interpret "Tests2/Test8") 6)     ;6
+(eq? (interpret "Tests2/Test9") -1)    ;-1
+(eq? (interpret "Tests2/Test10") 789)  ;789 |#
 ;(interpret "Tests2/Test11")  ;Error
 ;(interpret "Tests2/Test12")  ;Error
 ;(interpret "Tests2/Test13")   ;Error
-;(interpret "Tests2/Test14")   ;12
-#|(interpret "Tests2/Test15")   ;125
-(interpret "Tests2/Test16")   ;110
-(interpret "Tests2/Test17")   ;2000400
-(interpret "Tests2/Test18")   ;101
+;(eq? (interpret "Tests2/Test14") 12)   ;12
+#|
+(eq? (interpret "Tests2/Test15") 125)   ;125
+(interpret "Tests2/Test15")
+(eq? (interpret "Tests2/Test16") 110)  ;110
+(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
+(eq? (interpret "Tests2/Test18") 101)  ;101
 ;(interpret "Tests2/Test19")   ;Error |#

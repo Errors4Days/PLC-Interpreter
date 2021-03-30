@@ -259,22 +259,23 @@
 (define M-try-catch
   (lambda (expression next vars returns break continue throw)
     (cond
-      #|
       ; Only a try
       [(and (null? (caddr expression))(null? (cadddr expression)))
-       (M-state (cons (cdr expression) next) vars returns break continue throw)]
+       (M-state (append (cadr expression)next)
+                vars returns break continue throw)]
       ; Try and a catch
       [(null? (cadddr expression))
-       (M-state (cons (cdr expression) next) vars returns break continue throw)]|#
+       (M-state (cons (cdr expression) next) vars returns break continue throw)]
       ; Try and a finally
       [(null? (caddr expression))
-       (M-state (cons (cadddr expression) next) vars returns break continue throw)]
+       (M-state (append (cadr expression)(cadr (cadddr expression)) next)
+                vars returns break continue throw)])))
       ; Try, catch, finally
-      [else
-       #|(M-state (cons 
+      #|[else
+       (M-state (cons 
                 (lambda (k) (call/cc (M-state expression vars returns break continue k)))
-                returns break continue throw)|#
-       '()])))
+                returns break continue throw)
+       '()])))|#
 
 ; Returns a value or boolean
 ; '(M-return 'x)
@@ -327,7 +328,7 @@
                     vars returns break continue throw)]
        [(eq? (operator (nextExecute expression)) 'throw)
        (throw (cdr (nextExecute expression)))]
-      [else (error 'function-not-recognized-by-interpreter)])))
+      [else expression])))
 
 ;;; *******************************
 ;;; INTERPRETER FUNCTION
@@ -397,7 +398,7 @@
 ;(eq? (interpret "Tests2/Test15") 125)   ;125
 ;#|
 ;(eq? (interpret "Tests2/Test16") 110)  ;110
-;(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
-(eq? (interpret "Tests2/Test18") 101)  ;101
-(interpret "Tests2/Test18")
+(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
+(interpret "Tests2/Test17")
+;(eq? (interpret "Tests2/Test18") 101)  ;101
 ;(interpret "Tests2/Test19")   ;Error |#

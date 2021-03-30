@@ -27,12 +27,12 @@
 (define catchBody caddr)
 (define finallyBody cadddr)
 
-;combines int_val and leftoperand because of it's frequency
+;combines int_val and leftoperand because of it's frequency in code
 (define left_val
   (lambda (val vars)
     (int_val (leftoperand val) vars)))
 
-;combines int_val and rightoperand because of it's frequency
+;combines int_val and rightoperand because of it's frequency in code
 (define right_val
   (lambda (val vars)
     (int_val (rightoperand val) vars)))
@@ -47,14 +47,14 @@
       [(eq? a (car lis)) #t]
       [else (member*? a (cdr lis))])))
 
-; Checks if a var is declared at all
+; Checks if a var is declared within the entire stack of vars
 (define declare?
   (lambda (aVar vars)
     (cond
       [(null? vars) #f]
       [(member*? aVar (unbox (car vars))) #t]
       [else (declare? aVar (cdr vars))])))
-; Checks if a var is declared on the lowest layer
+; Checks if a var is declared on the most recent layer
 (define declareStack?
   (lambda (aVar vars)
     (cond
@@ -62,7 +62,8 @@
       [(member*? aVar (unbox (car vars))) #t]
       [else #f])))
 
-; Replaces a variable value
+; Replaces a specified variable's value with a new value. The variable must
+; have already been declared before this point
 (define insert-cps
   (lambda (var value varlis valuelis return)
     (cond
@@ -71,6 +72,9 @@
       [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
       [else (insert-cps var value (cdr varlis) (cdr valuelis)
                         (lambda (v) (return (cons (car valuelis) v))))])))
+
+; Iterates through the entire stack of variable layers and uses insert-cps on each layer until
+; one of the values contains the sought after variable
 (define insert
   (lambda (var value lis)
     (cond
@@ -81,7 +85,7 @@
                                                                         (list v))) (cdr lis))))]
       [else (cons (car lis) (insert var value (cdr lis)))])))
        
-; Get variable value
+; Get variable value from a list of variables and values
 (define getValue
   (lambda (varA vars)
     (cond
@@ -89,6 +93,8 @@
       [(not (null? (getValue-helper varA (unbox (car vars)))))
        (getValue-helper varA (unbox (car vars)))]
       [else (getValue varA (cdr vars))])))
+
+; Finds a variable in a list of variable names
 (define getValue-helper
   (lambda (varName lis)
     (cond
@@ -207,14 +213,14 @@
 (define M-declare
   (lambda (expression vars)
     (cond
-      ; Error redefining
+      ; Error redefining through checking if variable has been declared in stack
       [(declareStack? (leftoperand expression) vars) (error 'redefining-variable)]
       ; Declaration and assignment
       [(not (null? (cddr expression)))
        (M-assign (cons '= (list (leftoperand expression)
                                 (M-evaluate (rightoperand expression) vars)))
                  (M-declare (list 'var (leftoperand expression)) vars))]
-      ; Standard declaration
+      ; Standard declaration - assigns a variable to a null value () which is a placeholder for later values
       [else (cons (box (cons (cons (leftoperand expression) (car (unbox (car vars))))
                              (list (cons '() (cadr (unbox (car vars))))))) (cdr vars))])))
 

@@ -1,7 +1,7 @@
 #lang racket
 ; Elizabeth Shumaker and Justin Lee
 ; Issues unfixed for submissions:
-; Test 10 did not run properly. There was some in proper manipulation of y in the middle block. The
+; Test 10 did not run properly. There was some improper manipulation of y in the middle block. The
 ; source of this error hasn't been located. 
 ; Test 13 and Test 19 don't throw errors. With more time these errors would have been caught
 ; Only portions of try catch currently work. The catch component doesn't work, but try and finally

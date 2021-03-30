@@ -1,7 +1,11 @@
 #lang racket
 ; Elizabeth Shumaker and Justin Lee
-; TODO:
-; abstract bottom of M-declare
+; Issues unfixed for submissions:
+; Test 10 did not run properly. There was some in proper manipulation of y in the middle block. The
+; source of this error hasn't been located. 
+; Test 13 and Test 19 don't throw errors. With more time these errors would have been caught
+; Only portions of try catch currently work. The catch component doesn't work, but try and finally
+; work.
 
 (require "simpleParser.rkt")
 ;;; *******************************
@@ -62,7 +66,8 @@
       [(member*? aVar (unbox (car vars))) #t]
       [else #f])))
 
-; Replaces a variable value
+; Replaces a specified variable's value with a new value. The variable must
+; have already been declared before this point
 (define insert-cps
   (lambda (var value varlis valuelis return)
     (cond
@@ -71,6 +76,8 @@
       [(eq? var (car varlis)) (return (cons value (cdr valuelis)))]
       [else (insert-cps var value (cdr varlis) (cdr valuelis)
                         (lambda (v) (return (cons (car valuelis) v))))])))
+; Iterates through the entire stack of variable layers and uses insert-cps on each layer until
+; one of the values contains the sought after variable
 (define insert
   (lambda (var value lis)
     (cond
@@ -81,7 +88,7 @@
                                                                         (list v))) (cdr lis))))]
       [else (cons (car lis) (insert var value (cdr lis)))])))
        
-; Get variable value
+; Get variable value from a list of variables and values
 (define getValue
   (lambda (varA vars)
     (cond

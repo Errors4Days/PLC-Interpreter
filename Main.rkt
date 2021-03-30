@@ -18,6 +18,15 @@
 (define nextExecute car)
 (define remainderExpression cdr)
 
+(define popLayer cdr)
+(define addLayer
+  (lambda (vars)
+    (cons (box '(()())) vars)))
+
+(define tryBody cadr)
+(define catchBody caddr)
+(define finallyBody cadddr)
+
 ;combines int_val and leftoperand because of it's frequency
 (define left_val
   (lambda (val vars)
@@ -227,7 +236,7 @@
        (M-state (cons (rightoperand expression) next) vars returns break continue throw)]
       ; Else
       [(not (null? (lastQuadruple expression)))
-       (M-state (cons (car (lastQuadruple expression)) next) vars returns break continue throw)]                        
+       (M-state (cons (nextExecute (lastQuadruple expression)) next) vars returns break continue throw)]                        
       ; No else if
       [else (M-state next vars returns break continue throw)])))
 
@@ -260,15 +269,15 @@
   (lambda (expression next vars returns break continue throw)
     (cond
       ; Only a try
-      [(and (null? (caddr expression))(null? (cadddr expression)))
+      [(and (null? (catchBody expression))(null? (finallyBody expression)))
        (M-state (append (cadr expression)next)
                 vars returns break continue throw)]
       ; Try and a catch
       [(null? (cadddr expression))
        (M-state (cons (cdr expression) next) vars returns break continue throw)]
       ; Try and a finally
-      [(null? (caddr expression))
-       (M-state (append (cadr expression)(cadr (cadddr expression)) next)
+      [(null? (catchBody expression))
+       (M-state (append (tryBody expression)(cadr (finallyBody expression)) next)
                 vars returns break continue throw)])))
       ; Try, catch, finally
       #|[else
@@ -295,7 +304,7 @@
       [(eq? (operator expression) 'begin)
        (M-begin (cdr expression) vars returns break continue throw)]
       [else (cdr (M-state expression
-                          (cons (box '(()())) vars) returns break continue throw))])))
+                          (addLayer vars) returns break continue throw))])))
 
 ; Variables stored as '((x 3) (y) (i 7)) in vars
 (define M-state
@@ -320,15 +329,15 @@
                 (M-begin (nextExecute expression) vars returns break continue throw)
                 returns break continue throw)]
       [(eq? (operator (nextExecute expression)) 'break)
-       (break (cdr vars))]
+       (break (popLayer vars))]
       [(eq? (operator (nextExecute expression)) 'continue)
-       (continue (cdr vars))]
+       (continue (popLayer vars))]
        [(eq? (operator (nextExecute expression)) 'try)
        (M-try-catch (nextExecute expression) (remainderExpression expression)
                     vars returns break continue throw)]
        [(eq? (operator (nextExecute expression)) 'throw)
-       (throw (cdr (nextExecute expression)))]
-      [else expression])))
+       (throw (nextExecute expression))]
+      [else (error 'unrecognized-function)])))
 
 ;;; *******************************
 ;;; INTERPRETER FUNCTION
@@ -378,7 +387,7 @@
 (eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
 
 ;;; TESTS FOR INTERPRETER PT2
-#|
+
 (eq? (interpret "Tests2/Test1") 20)    ;20
 (eq? (interpret "Tests2/Test2") 164)   ;164
 (eq? (interpret "Tests2/Test3") 32)    ;32
@@ -398,7 +407,7 @@
 ;(eq? (interpret "Tests2/Test15") 125)   ;125
 ;#|
 ;(eq? (interpret "Tests2/Test16") 110)  ;110
-(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
-(interpret "Tests2/Test17")
+;(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
+;(interpret "Tests2/Test17")
 ;(eq? (interpret "Tests2/Test18") 101)  ;101
 ;(interpret "Tests2/Test19")   ;Error |#

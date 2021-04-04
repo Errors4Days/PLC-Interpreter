@@ -1,12 +1,9 @@
-; If you are using scheme instead of racket, comment these two lines, uncomment the (load "simpleParser.scm") and comment the (require "simpleParser.rkt")
+; Elizabeth and Justin
 #lang racket
-(require "simpleParser.rkt")
-; (load "simpleParser.scm")
-
+(require "functionParser.rkt")
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
-
 
 ; The functions that start interpret-...  all return the current environment.
 ; The functions that start eval-...  all return a value
@@ -23,7 +20,6 @@
 
 ; interprets a list of statements.  The environment from each statement is used for the next ones.
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
-
 (define interpret-statement-list
   (lambda (statement-list environment return break continue throw)
     (if (null? statement-list)
@@ -34,17 +30,17 @@
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
-      ((eq? 'return (statement-type statement)) (interpret-return statement environment return))
-      ((eq? 'var (statement-type statement)) (interpret-declare statement environment))
-      ((eq? '= (statement-type statement)) (interpret-assign statement environment))
-      ((eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw))
-      ((eq? 'while (statement-type statement)) (interpret-while statement environment return throw))
-      ((eq? 'continue (statement-type statement)) (continue environment))
-      ((eq? 'break (statement-type statement)) (break environment))
-      ((eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw))
-      ((eq? 'throw (statement-type statement)) (interpret-throw statement environment throw))
-      ((eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw))
-      (else (myerror "Unknown statement:" (statement-type statement))))))
+      [(eq? 'return (statement-type statement)) (interpret-return statement environment return)]
+      [(eq? 'var (statement-type statement)) (interpret-declare statement environment)]
+      [(eq? '= (statement-type statement)) (interpret-assign statement environment)]
+      [(eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw)]
+      [(eq? 'while (statement-type statement)) (interpret-while statement environment return throw)]
+      [(eq? 'continue (statement-type statement)) (continue environment)]
+      [(eq? 'break (statement-type statement)) (break environment)]
+      [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
+      [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
+      [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
+      [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -67,9 +63,9 @@
 (define interpret-if
   (lambda (statement environment return break continue throw)
     (cond
-      ((eval-expression (get-condition statement) environment) (interpret-statement (get-then statement) environment return break continue throw))
-      ((exists-else? statement) (interpret-statement (get-else statement) environment return break continue throw))
-      (else environment))))
+      [(eval-expression (get-condition statement) environment) (interpret-statement (get-then statement) environment return break continue throw)]
+      [(exists-else? statement) (interpret-statement (get-else statement) environment return break continue throw)]
+      [else environment])))
 
 ; Interprets a while loop.  We must create break and continue continuations for this loop
 (define interpret-while
@@ -383,7 +379,6 @@
       ((eq? v #f) 'false)
       ((eq? v #t) 'true)
       (else v))))
-
 
 
 ; Because the error function is not defined in R5RS scheme, I create my own:

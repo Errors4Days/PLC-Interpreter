@@ -1,9 +1,12 @@
-; Elizabeth and Justin
+; If you are using scheme instead of racket, comment these two lines, uncomment the (load "simpleParser.scm") and comment the (require "simpleParser.rkt")
 #lang racket
-(require "functionParser.rkt")
+(require "simpleParser.rkt")
+; (load "simpleParser.scm")
+
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
+
 
 ; The functions that start interpret-...  all return the current environment.
 ; The functions that start eval-...  all return a value
@@ -382,6 +385,7 @@
       (else v))))
 
 
+
 ; Because the error function is not defined in R5RS scheme, I create my own:
 (define error-break (lambda (v) v))
 (call-with-current-continuation (lambda (k) (set! error-break k)))
@@ -394,61 +398,3 @@
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 
-;;; *******************************
-;;; Provided Test Cases
-;;; *******************************
-;(parser "Tests/Test7")
-
-; Part 1
-(eq? (interpret "Tests/Test1") 150) ; 150
-(eq? (interpret "Tests/Test2") -4) ; -4
-(eq? (interpret "Tests/Test3") 10) ; 10
-(eq? (interpret "Tests/Test4") 16) ; 16
-(eq? (interpret "Tests/Test5") 220) ; 220
-(eq? (interpret "Tests/Test6") 5) ; 5
-(eq? (interpret "Tests/Test7") 6) ; 6
-(eq? (interpret "Tests/Test8") 10) ; 10
-(eq? (interpret "Tests/Test9") 5) ; 5
-(eq? (interpret "Tests/Test10") -39) ; -39
-; (interpret "Tests/Test11") ; error using before declaring
-; (interpret "Tests/Test12") ; error variable not declared
-; (interpret "Tests/Test13") ; error using before assigning
-; (interpret "Tests/Test14") ; error redefining variable
-(eq? (interpret "Tests/Test15") 'true) ; true
-(eq? (interpret "Tests/Test16") 100); 100
-(eq? (interpret "Tests/Test17") 'false); false
-(eq? (interpret "Tests/Test18") 'true); true
-(eq? (interpret "Tests/Test19") 128); 128
-(eq? (interpret "Tests/Test20") 12); 12 
-;;; SELF MADE TEST CASES
-(eq? (interpret "Tests/Test30") 82)     ;output should be 82
-(eq? (interpret "Tests/Test31") 100)    ;output should be 100
-(eq? (interpret "Tests/Test32") 'true)    ;output should be 'true
-(eq? (interpret "Tests/Test33") 'false)    ;output should be 'false
-(eq? (interpret "Tests/Test34") 107)    ;output should be 107
-(eq? (interpret "Tests/Test35") 0)   ;output should be 0
-; (interpret "Tests/Test36")    ;throws error undeclared
-; (interpret "Tests/Test37")    ;throws error invalid if
-(eq? (interpret "Tests/Test38") 100)     ;output should be 100 |#
-
-;;; TESTS FOR INTERPRETER PT2
-
-(eq? (interpret "Tests2/Test1") 20)    ;20
-(eq? (interpret "Tests2/Test2") 164)   ;164
-(eq? (interpret "Tests2/Test3") 32)    ;32
-(eq? (interpret "Tests2/Test4") 2)     ;2
-;(interpret "Tests2/Test5")    ;Error
-(eq? (interpret "Tests2/Test6") 25)    ;25
-(eq? (interpret "Tests2/Test7") 21)    ;21
-(eq? (interpret "Tests2/Test8") 6)     ;6
-(eq? (interpret "Tests2/Test9") -1)    ;-1 |#
-(eq? (interpret "Tests2/Test10") 789)  ;789
-;(interpret "Tests2/Test11")  ;Error
-;(interpret "Tests2/Test12")  ;Error
-;(interpret "Tests2/Test13")   ;Error
-(eq? (interpret "Tests2/Test14") 12)   ;12
-(eq? (interpret "Tests2/Test15") 125)   ;125
-(eq? (interpret "Tests2/Test16") 110)  ;110
-(eq? (interpret "Tests2/Test17") 2000400)  ;2000400
-(eq? (interpret "Tests2/Test18") 101)  ;101
-;(interpret "Tests2/Test19")   ;Error |#

@@ -434,3 +434,25 @@ Stuff we edited:
 
 (parser "Tests3/Test1")
 (interpret "Tests3/Test1")
+
+(eq? (interpret "Tests3/Test1") 10)      ; 10
+(eq? (interpret "Tests3/Test2") 14)      ; 14
+(eq? (interpret "Tests3/Test3") 45)      ; 45
+(eq? (interpret "Tests3/Test4") 55)      ; 55
+(eq? (interpret "Tests3/Test5") 1)       ; 1
+(eq? (interpret "Tests3/Test6") 115)     ; 115
+(eq? (interpret "Tests3/Test7") #t)      ; #t
+(eq? (interpret "Tests3/Test8") 20)      ; 20
+(eq? (interpret "Tests3/Test9") 24)      ; 24
+(eq? (interpret "Tests3/Test10") 2)      ; 2
+
+(eq? (interpret "Tests3/Test11") 35)     ; 35
+;(eq? (interpret "Tests3/Test12") )      ; ERROR
+(eq? (interpret "Tests3/Test13") 90)     ; 90
+(eq? (interpret "Tests3/Test14") 69)     ; 69
+(eq? (interpret "Tests3/Test15") 87)     ; 87
+(eq? (interpret "Tests3/Test16") 64)     ; 64
+;(eq? (interpret "Tests3/Test17") )      ; ERROR
+(eq? (interpret "Tests3/Test18") 125)    ; 125
+(eq? (interpret "Tests3/Test19") 100)    ; 100
+(eq? (interpret "Tests3/Test20") 2000400); 2000400

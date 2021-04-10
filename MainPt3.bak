@@ -1,19 +1,6 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-#| TODO:
-- binding function
-- get the closure
-- split the M-state parser into 2 passes:
-  1. Go through and create global variables and functions
-  2. Run main function
-|#
-#|
-Stuff we added:
-  interpret-function
-Stuff we edited:
-  interpret-statement-list
-|#
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -35,31 +22,11 @@ Stuff we edited:
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
 (define interpret-statement-list
   (lambda (statement-list environment return break continue throw)
-    (cond
-      [(null? statement-list) environment]
-      [(eq? (cadar statement-list) 'main)
-       (interpret-statement-list (car(cdddar statement-list)) return break continue throw)]
-      [else 'bleh])))
-
-; runs main()
-(define interpret-statement-main
-  (lambda (statement environment return break continue throw)
-    (cond
-      [(eq? 'return (statement-type statement)) (interpret-return statement environment return)]
-      [(eq? 'var (statement-type statement)) (interpret-declare statement environment)]
-      [(eq? '= (statement-type statement)) (interpret-assign statement environment)]
-      [(eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw)]
-      [(eq? 'while (statement-type statement)) (interpret-while statement environment return throw)]
-      [(eq? 'continue (statement-type statement)) (continue environment)]
-      [(eq? 'break (statement-type statement)) (break environment)]
-      [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
-      [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
-      [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'function (statement-type statement)) ____]
-      [else (myerror "Unknown statement:" (statement-type statement))])))
+    (if (null? statement-list)
+        environment
+        (interpret-statement-list (cdr statement-list) (interpret-statement (car statement-list) environment return break continue throw) return break continue throw))))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
-; creates all of the bindings before main()
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
@@ -73,13 +40,7 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'function (statement-type statement)) ____]
       [else (myerror "Unknown statement:" (statement-type statement))])))
-
-; Adds a function binding to the enivronment
-(define interpret-function
-  (lambda (statement environment)
-    (insert (get-expr statement) (cddr statement) environment)))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -432,5 +393,3 @@ Stuff we edited:
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 
-(parser "Tests3/Test1")
-(interpret "Tests3/Test1")

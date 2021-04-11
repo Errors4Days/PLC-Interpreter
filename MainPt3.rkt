@@ -83,22 +83,34 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      [(eq? 'funcall (statement-type statement)) (return 'line86)]
+      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
-; '(fib (a) ((if (== a 0) (return 0) (if (== a 1) (return 1) (return (+ (funcall fib (- a 1)) (funcall fib (- a 2))))))))
 (define interpret-function-bind
   (lambda (statement environment)
     (update (statement-type statement) (cdr statement)
             (insert (statement-type statement) 'novalue environment))))
 
+; Evaluates a function call
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
     (call/cc (lambda (return)
-               (interpret-statement-list-main (lookup-in-env (car function-list))
-                                              (appendenvironment)
-                                              (return) break continue throw)))))
+               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
+                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
+                                                                 (push-frame environment))
+                                              return break continue throw)))))
+
+; Adds the function parameters to the frame
+(define interpret-closure
+  (lambda (function-name function-parameter-names function-parameter-values environment)
+    (cond
+      [(and (null? function-parameter-names) (null? function-parameter-values)) environment]
+      [(null? function-parameter-values) (myerror "Missing input parameters at function:" function-name)]
+      [(null? function-parameter-names) (myerror "Extra input parameters at function:" function-name)]
+      [else (interpret-closure function-name (cdr function-parameter-names) (cdr function-parameter-values)
+                               (update (car function-parameter-names) (car function-parameter-values)
+                                       (insert (car function-parameter-names) 'novalue environment)))])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return

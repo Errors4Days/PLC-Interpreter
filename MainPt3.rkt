@@ -15,6 +15,7 @@ Stuff we added:
   interpret-statement-bind
 Stuff we edited:
   interpret-statement-list
+  eval=binary-op2
 |#
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
@@ -58,7 +59,7 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Runs the main function
@@ -92,6 +93,15 @@ Stuff we edited:
     (update (statement-type statement) (cdr statement)
             (insert (statement-type statement) 'novalue environment))))
 
+(define eval-function-call-quick
+  (lambda (expr environment)
+    (call/cc
+     (lambda (return)
+       (eval-function-call (cdr expr) environment
+                           return
+                           (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
+                           (lambda (v env) (myerror "Uncaught exception thrown")))))))
+
 ; Evaluates a function call
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
@@ -109,7 +119,7 @@ Stuff we edited:
       [(null? function-parameter-values) (myerror "Missing input parameters at function:" function-name)]
       [(null? function-parameter-names) (myerror "Extra input parameters at function:" function-name)]
       [else (interpret-closure function-name (cdr function-parameter-names) (cdr function-parameter-values)
-                               (update (car function-parameter-names) (car function-parameter-values)
+                               (update (car function-parameter-names) (eval-expression (car function-parameter-values) environment)
                                        (insert (car function-parameter-names) 'novalue environment)))])))
 
 ; Calls the return continuation with the given expression value
@@ -216,11 +226,12 @@ Stuff we edited:
 (define eval-expression
   (lambda (expr environment)
     (cond
-      ((number? expr) expr)
-      ((eq? expr 'true) #t)
-      ((eq? expr 'false) #f)
-      ((not (list? expr)) (lookup expr environment))
-      (else (eval-operator expr environment)))))
+      [(number? expr) expr]
+      [(eq? expr 'true) #t]
+      [(eq? expr 'false) #f]
+      [(not (list? expr)) (lookup expr environment)]
+      [(eq? 'funcall (operator expr)) (eval-function-call-quick expr environment)]
+      [else (eval-operator expr environment)])))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
 ; pass the result to eval-binary-op2 to evaluate the right operand.  This forces the operands to be evaluated in the proper order in case you choose
@@ -462,14 +473,14 @@ Stuff we edited:
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-(interpret "temp.txt")
-
+(interpret "Tests3/Test5")
+#|
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
-#|
 (eq? (interpret "Tests3/Test4") 55)      ; 55
-(eq? (interpret "Tests3/Test5") 1)       ; 1
+(eq? (interpret "Tests3/Test5") 1)       ; 1|#
+#|
 (eq? (interpret "Tests3/Test6") 115)     ; 115
 (eq? (interpret "Tests3/Test7") #t)      ; #t
 (eq? (interpret "Tests3/Test8") 20)      ; 20

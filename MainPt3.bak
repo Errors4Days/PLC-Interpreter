@@ -1,6 +1,21 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
+#| TODO:
+- binding function
+- get the closure
+- split the M-state parser into 2 passes:
+  1. Go through and create global variables and functions
+  2. Run main function
+|#
+#|
+Stuff we added:
+  interpret-function
+  interpret-statement-list-main
+  interpret-statement-bind
+Stuff we edited:
+  interpret-statement-list
+|#
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -22,9 +37,37 @@
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
 (define interpret-statement-list
   (lambda (statement-list environment return break continue throw)
-    (if (null? statement-list)
-        environment
-        (interpret-statement-list (cdr statement-list) (interpret-statement (car statement-list) environment return break continue throw) return break continue throw))))
+    (cond
+      [(null? statement-list) environment]
+      [(and (eq? (caar statement-list) 'function) (eq? (cadar statement-list) 'main))
+       (interpret-statement-list-main (car (cdddar statement-list)) (push-frame environment) return break continue throw)] ; main()
+      [else (interpret-statement-list (cdr statement-list)
+                                      (interpret-statement-bind (car statement-list) environment return break continue throw) return break continue throw)])))
+
+; creates global variables and bindings
+(define interpret-statement-bind
+  (lambda (statement environment return break continue throw)
+    (cond
+      [(eq? 'return (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
+      [(eq? 'var (statement-type statement)) (interpret-declare statement environment)]
+      [(eq? '= (statement-type statement)) (interpret-assign statement environment)]
+      [(eq? 'if (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
+      [(eq? 'while (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
+      [(eq? 'continue (statement-type statement)) (continue environment)]
+      [(eq? 'break (statement-type statement)) (break environment)]
+      [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
+      [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
+      [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
+      [else (myerror "Unknown statement:" (statement-type statement))])))
+
+; Runs the main function
+(define interpret-statement-list-main
+  (lambda (statement-list environment return break continue throw)
+    (cond
+      [(null? statement-list) environment]
+      [else (interpret-statement-list-main (cdr statement-list)
+                                      (interpret-statement (car statement-list) environment return break continue throw) return break continue throw)])))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
 (define interpret-statement
@@ -40,7 +83,34 @@
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
+      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
+
+; Adds a function binding to the enivronment
+(define interpret-function-bind
+  (lambda (statement environment)
+    (update (statement-type statement) (cdr statement)
+            (insert (statement-type statement) 'novalue environment))))
+
+; Evaluates a function call
+(define eval-function-call
+  (lambda (function-list environment return break continue throw)
+    (call/cc (lambda (return)
+               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
+                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
+                                                                 (push-frame environment))
+                                              return break continue throw)))))
+
+; Adds the function parameters to the frame
+(define interpret-closure
+  (lambda (function-name function-parameter-names function-parameter-values environment)
+    (cond
+      [(and (null? function-parameter-names) (null? function-parameter-values)) environment]
+      [(null? function-parameter-values) (myerror "Missing input parameters at function:" function-name)]
+      [(null? function-parameter-names) (myerror "Extra input parameters at function:" function-name)]
+      [else (interpret-closure function-name (cdr function-parameter-names) (cdr function-parameter-values)
+                               (update (car function-parameter-names) (car function-parameter-values)
+                                       (insert (car function-parameter-names) 'novalue environment)))])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -392,4 +462,27 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
+(interpret "temp.txt")
 
+(eq? (interpret "Tests3/Test1") 10)      ; 10
+(eq? (interpret "Tests3/Test2") 14)      ; 14
+(eq? (interpret "Tests3/Test3") 45)      ; 45
+#|
+(eq? (interpret "Tests3/Test4") 55)      ; 55
+(eq? (interpret "Tests3/Test5") 1)       ; 1
+(eq? (interpret "Tests3/Test6") 115)     ; 115
+(eq? (interpret "Tests3/Test7") #t)      ; #t
+(eq? (interpret "Tests3/Test8") 20)      ; 20
+(eq? (interpret "Tests3/Test9") 24)      ; 24
+(eq? (interpret "Tests3/Test10") 2)      ; 2
+
+(eq? (interpret "Tests3/Test11") 35)     ; 35
+;(eq? (interpret "Tests3/Test12") )      ; ERROR
+(eq? (interpret "Tests3/Test13") 90)     ; 90
+(eq? (interpret "Tests3/Test14") 69)     ; 69
+(eq? (interpret "Tests3/Test15") 87)     ; 87
+(eq? (interpret "Tests3/Test16") 64)     ; 64
+;(eq? (interpret "Tests3/Test17") )      ; ERROR
+(eq? (interpret "Tests3/Test18") 125)    ; 125
+(eq? (interpret "Tests3/Test19") 100)    ; 100
+(eq? (interpret "Tests3/Test20") 2000400); 2000400 |#

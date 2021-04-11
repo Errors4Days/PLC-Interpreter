@@ -40,7 +40,7 @@ Stuff we edited:
     (cond
       [(null? statement-list) environment]
       [(and (eq? (caar statement-list) 'function) (eq? (cadar statement-list) 'main))
-       (interpret-statement-list-main (car(cdddar statement-list)) environment return break continue throw)] ; main()
+       (interpret-statement-list-main (car (cdddar statement-list)) (push-frame environment) return break continue throw)] ; main()
       [else (interpret-statement-list (cdr statement-list)
                                       (interpret-statement-bind (car statement-list) environment return break continue throw) return break continue throw)])))
 
@@ -463,10 +463,11 @@ Stuff we edited:
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 (interpret "temp.txt")
-#|
+
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
+#|
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
 (eq? (interpret "Tests3/Test6") 115)     ; 115

@@ -11,6 +11,8 @@
 #|
 Stuff we added:
   interpret-function
+  interpret-statement-list-main
+  interpret-statement-bind
 Stuff we edited:
   interpret-statement-list
 |#
@@ -38,19 +40,19 @@ Stuff we edited:
     (cond
       [(null? statement-list) environment]
       [(and (eq? (caar statement-list) 'function) (eq? (cadar statement-list) 'main))
-       (interpret-statement-list (car(cdddar statement-list)) environment return break continue throw)] ; main()
+       (interpret-statement-list-main (car(cdddar statement-list)) environment return break continue throw)] ; main()
       [else (interpret-statement-list (cdr statement-list)
-                                      (interpret-statement (car statement-list) environment return break continue throw) return break continue throw)])))
+                                      (interpret-statement-bind (car statement-list) environment return break continue throw) return break continue throw)])))
 
 ; creates global variables and bindings
 (define interpret-statement-bind
   (lambda (statement environment return break continue throw)
     (cond
-      [(eq? 'return (statement-type statement)) (interpret-return statement environment return)]
+      [(eq? 'return (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'var (statement-type statement)) (interpret-declare statement environment)]
       [(eq? '= (statement-type statement)) (interpret-assign statement environment)]
-      [(eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw)]
-      [(eq? 'while (statement-type statement)) (interpret-while statement environment return throw)]
+      [(eq? 'if (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
+      [(eq? 'while (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'continue (statement-type statement)) (continue environment)]
       [(eq? 'break (statement-type statement)) (break environment)]
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
@@ -58,6 +60,14 @@ Stuff we edited:
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
       ;[(eq? 'function (statement-type statement)) ____]
       [else (myerror "Unknown statement:" (statement-type statement))])))
+
+; Runs the main function
+(define interpret-statement-list-main
+  (lambda (statement-list environment return break continue throw)
+    (cond
+      [(null? statement-list) environment]
+      [else (interpret-statement-list-main (cdr statement-list)
+                                      (interpret-statement (car statement-list) environment return break continue throw) return break continue throw)])))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
 (define interpret-statement
@@ -433,8 +443,8 @@ Stuff we edited:
 
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
-#|
 (eq? (interpret "Tests3/Test3") 45)      ; 45
+#|
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
 (eq? (interpret "Tests3/Test6") 115)     ; 115

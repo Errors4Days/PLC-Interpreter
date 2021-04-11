@@ -37,12 +37,13 @@ Stuff we edited:
   (lambda (statement-list environment return break continue throw)
     (cond
       [(null? statement-list) environment]
-      [(eq? (cadar statement-list) 'main)
-       (interpret-statement-list (car(cdddar statement-list)) return break continue throw)]
-      [else 'bleh])))
+      [(and (eq? (caar statement-list) 'function) (eq? (cadar statement-list) 'main))
+       (interpret-statement-list (car(cdddar statement-list)) environment return break continue throw)] ; main()
+      [else (interpret-statement-list (cdr statement-list)
+                                      (interpret-statement (car statement-list) environment return break continue throw) return break continue throw)])))
 
-; runs main()
-(define interpret-statement-main
+; creates global variables and bindings
+(define interpret-statement-bind
   (lambda (statement environment return break continue throw)
     (cond
       [(eq? 'return (statement-type statement)) (interpret-return statement environment return)]
@@ -59,7 +60,6 @@ Stuff we edited:
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
-; creates all of the bindings before main()
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
@@ -73,7 +73,6 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'function (statement-type statement)) ____]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -432,11 +431,9 @@ Stuff we edited:
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 
-(parser "Tests3/Test1")
-(interpret "Tests3/Test1")
-
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
+#|
 (eq? (interpret "Tests3/Test3") 45)      ; 45
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
@@ -455,4 +452,4 @@ Stuff we edited:
 ;(eq? (interpret "Tests3/Test17") )      ; ERROR
 (eq? (interpret "Tests3/Test18") 125)    ; 125
 (eq? (interpret "Tests3/Test19") 100)    ; 100
-(eq? (interpret "Tests3/Test20") 2000400); 2000400
+(eq? (interpret "Tests3/Test20") 2000400); 2000400 |#

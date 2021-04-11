@@ -58,7 +58,7 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'function (statement-type statement)) ____]
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Runs the main function
@@ -83,12 +83,22 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
+      [(eq? 'funcall (statement-type statement)) (return 'line86)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
-(define interpret-function
+; '(fib (a) ((if (== a 0) (return 0) (if (== a 1) (return 1) (return (+ (funcall fib (- a 1)) (funcall fib (- a 2))))))))
+(define interpret-function-bind
   (lambda (statement environment)
-    (insert (get-expr statement) (cddr statement) environment)))
+    (update (statement-type statement) (cdr statement)
+            (insert (statement-type statement) 'novalue environment))))
+
+(define eval-function-call
+  (lambda (function-list environment return break continue throw)
+    (call/cc (lambda (return)
+               (interpret-statement-list-main (lookup-in-env (car function-list))
+                                              (appendenvironment)
+                                              (return) break continue throw)))))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -440,11 +450,11 @@ Stuff we edited:
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-
+(interpret "temp.txt")
+#|
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
-#|
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
 (eq? (interpret "Tests3/Test6") 115)     ; 115

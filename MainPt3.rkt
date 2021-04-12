@@ -101,20 +101,22 @@
                                                                  (caar (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
                                                                  (cdr (lookup-in-env (car function-list) environment))
-                                                                 (push-frame environment))
+                                                                 (push-frame environment)
+                                                                 (lookup-in-env (car function-list) environment))
                                    return break continue throw)))
 
 ; Adds the function parameters to the closure
 (define interpret-closure-parameters
-  (lambda (f-name f-parameter-names f-parameter-values closure environment)
+  (lambda (f-name f-parameter-names f-parameter-values closure environment code)
     (cond
-      [(and (null? f-parameter-names) (null? f-parameter-values)) closure]
+      [(and (null? f-parameter-names) (null? f-parameter-values))
+       (insert f-name code closure)]
       [(null? f-parameter-values) (myerror "Missing input parameters at function:" f-name)]
       [(null? f-parameter-names) (myerror "Extra input parameters at function:" f-name)]
       [else (interpret-closure-parameters f-name (cdr f-parameter-names) (cdr f-parameter-values)
                                           (update (car f-parameter-names) (eval-expression (car f-parameter-values) environment)
                                                   (insert (car f-parameter-names) 'novalue closure))
-                                          environment)])))
+                                          environment code)])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -475,10 +477,11 @@
 (eq? (interpret "Tests3/Test3") 45)      ; 45
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
-(eq? (interpret "Tests3/Test6") 115)     ; 115
-(eq? (interpret "Tests3/Test7") #t)      ; #t
+(eq? (interpret "Tests3/Test6") 115)     ; 115 ;REDECLARING
+(eq? (interpret "Tests3/Test7") 'true)      ;true
 (eq? (interpret "Tests3/Test8") 20)      ; 20
-(eq? (interpret "Tests3/Test9") 24)      ; 24
+(eq? (interpret "Tests3/Test9") 24)      ; 24 |#
+#|
 (eq? (interpret "Tests3/Test10") 2)      ; 2
 (eq? (interpret "Tests3/Test11") 35)     ; 35
 ;(eq? (interpret "Tests3/Test12") )      ; ERROR

@@ -80,7 +80,7 @@
 ; Gives the function everything it needs to run
 (define function-get-closure
   (lambda (code environment)
-    (cons (cdr code) environment)))
+    (cons code environment)))
 
 ; Calls on eval-function-call
 (define eval-function-call-quick
@@ -96,9 +96,9 @@
 ; ((a) (10))
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (interpret-statement-list-main (car (lookup-in-env (car function-list) environment))
+    (interpret-statement-list-main (cadar (lookup-in-env (car function-list) environment))
                                    (interpret-closure-parameters (car function-list)
-                                                                 (cadr (lookup-in-env (car function-list) environment))
+                                                                 (caar (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
                                                                  (cdr (lookup-in-env (car function-list) environment))
                                                                  (push-frame environment))
@@ -113,7 +113,8 @@
       [(null? f-parameter-names) (myerror "Extra input parameters at function:" f-name)]
       [else (interpret-closure-parameters f-name (cdr f-parameter-names) (cdr f-parameter-values)
                                           (update (car f-parameter-names) (eval-expression (car f-parameter-values) environment)
-                                                  (insert (car f-parameter-names) 'novalue closure)))])))
+                                                  (insert (car f-parameter-names) 'novalue closure))
+                                          environment)])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -466,7 +467,7 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-(interpret "Tests3/Test4")
+(interpret "temp.txt")
 
 #|
 (eq? (interpret "Tests3/Test1") 10)      ; 10

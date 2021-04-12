@@ -1,8 +1,9 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-
-;Throwing errors doesn't currently work.
+; ISSUES:
+; - try statements have unmonitored side effects
+; - test 20
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -26,10 +27,12 @@
   (lambda (statement-list environment return break continue throw)
     (cond
       [(null? statement-list) environment]
-      [(and (eq? (caar statement-list) 'function) (eq? (cadar statement-list) 'main))
-       (interpret-statement-list-main (car (cdddar statement-list)) (push-frame environment) return break continue throw)] ; main()
+      [(and (eq? (statement-type-first statement-list) 'function) (eq? (statement-type-second statement-list) 'main))
+       (interpret-statement-list-main (statement-type (main-code statement-list))
+                                      (push-frame environment) return break continue throw)]
       [else (interpret-statement-list (cdr statement-list)
-                                      (interpret-statement-bind (car statement-list) environment return break continue throw) return break continue throw)])))
+                                      (interpret-statement-bind (statement-type statement-list)
+                                                                environment return break continue throw) return break continue throw)])))
 
 ; creates global variables and bindings
 (define interpret-statement-bind
@@ -54,7 +57,7 @@
     (cond
       [(null? statement-list) environment]
       [else (interpret-statement-list-main (cdr statement-list)
-                                      (interpret-statement (car statement-list) environment return break continue throw) return break continue throw)])))
+                                      (interpret-statement (statement-type statement-list) environment return break continue throw) return break continue throw)])))
 
 ; interpret a statement in the environment with continuations for return, break, continue, throw
 (define interpret-statement
@@ -96,17 +99,15 @@
                            throw)))))
 
 ; Evaluates a function call
-; '((((if (== a 0) (return 0) (if (== a 1) (return 1) (return (+ (funcall fib (- a 1)) (funcall fib (- a 2)))))))) (() ()))
-; ((a) (10))
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (interpret-statement-list-main (cadar (lookup-in-env (car function-list) environment))
-                                   (push-frame (interpret-closure-parameters (car function-list)
-                                                                 (caar (lookup-in-env (car function-list) environment))
+    (interpret-statement-list-main (statement-type-second (lookup-in-env (statement-type function-list) environment))
+                                   (push-frame (interpret-closure-parameters (statement-type function-list)
+                                                                 (statement-type-first (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
                                                                  (push-frame (cdr (lookup-in-env (car function-list) environment)))
                                                                  environment
-                                                                 (lookup-in-env (car function-list) environment)
+                                                                 (lookup-in-env (statement-type function-list) environment)
                                                                  throw))
                                    return break continue throw)))
 
@@ -119,8 +120,7 @@
       [(null? f-parameter-values) (myerror "Missing input parameters at function:" f-name)]
       [(null? f-parameter-names) (myerror "Extra input parameters at function:" f-name)]
       [else (interpret-closure-parameters f-name (cdr f-parameter-names) (cdr f-parameter-values)
-                                          (update (car f-parameter-names) (eval-expression (car f-parameter-values) environment throw)
-                                                  (insert (car f-parameter-names) 'novalue closure))
+                                          (insert (statement-type f-parameter-names) (eval-expression (statement-type f-parameter-values) environment throw) closure)
                                           environment code throw)])))
 
 ; Calls the return continuation with the given expression value
@@ -310,6 +310,10 @@
   (lambda (catch-statement)
     (car (operand1 catch-statement))))
 
+(define statement-type-first caar)
+(define statement-type-second cadar)
+(define main-code cdddar)
+(define end cdr)
 
 ;------------------------
 ; Environment/State Functions
@@ -477,7 +481,7 @@
 
 ;(interpret "temp.txt")
 
-#|
+
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
@@ -496,5 +500,5 @@
 (eq? (interpret "Tests3/Test16") 64)     ; 64
 ;(interpret "Tests3/Test17")              ; ERROR
 (eq? (interpret "Tests3/Test18") 125)    ; 125
-(eq? (interpret "Tests3/Test19") 100)    ; 100|#
-(eq? (interpret "Tests3/Test20") 2000400); 2000400|#
+(eq? (interpret "Tests3/Test19") 100)    ; 100 |#
+;(eq? (interpret "Tests3/Test20") 2000400); 2000400|#

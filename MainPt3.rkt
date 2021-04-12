@@ -74,12 +74,12 @@
 ; Adds a function binding to the enivronment
 (define interpret-function-bind
   (lambda (statement environment)
-    (update (statement-type statement) (function-get-closure statement environment)
+    (update (statement-type statement) (cdr statement)
             (insert (statement-type statement) 'novalue environment))))
 
 (define function-get-closure
   (lambda (code environment)
-    (cons (cdr code) environment))) 
+    (cons (cdr code) environment)))
 
 (define eval-function-call-quick
   (lambda (expr environment)
@@ -382,7 +382,7 @@
 (define get-value
   (lambda (n l)
     (cond
-      ((zero? n) (car l))
+      ((zero? n) (unbox (car l)))
       (else (get-value (- n 1) (cdr l))))))
 
 ; Adds a new variable/value binding pair into the environment.  Gives an error if the variable already exists in this frame.
@@ -420,7 +420,7 @@
 (define update-in-frame-store
   (lambda (var val varlist vallist)
     (cond
-      ((eq? var (car varlist)) (cons (scheme->language val) (cdr vallist)))
+      ((eq? var (car varlist)) (begin (set-box! (car vallist) (scheme->language val)) vallist))
       (else (cons (car vallist) (update-in-frame-store var val (cdr varlist) (cdr vallist)))))))
 
 ; Returns the list of variables from a frame
@@ -461,14 +461,14 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-;(interpret "temp.txt")
+(interpret "Tests3/Test6")
 
+#|
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
 (eq? (interpret "Tests3/Test4") 55)      ; 55
-(eq? (interpret "Tests3/Test5") 1)       ; 1|#
-#|
+(eq? (interpret "Tests3/Test5") 1)       ; 1
 (eq? (interpret "Tests3/Test6") 115)     ; 115
 (eq? (interpret "Tests3/Test7") #t)      ; #t
 (eq? (interpret "Tests3/Test8") 20)      ; 20

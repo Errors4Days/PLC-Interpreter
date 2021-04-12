@@ -1,21 +1,8 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-#| TODO:
-- binding function
-- get the closure
-- split the M-state parser into 2 passes:
-  1. Go through and create global variables and functions
-  2. Run main function
-|#
-#|
-Stuff we added:
-  interpret-function
-  interpret-statement-list-main
-  interpret-statement-bind
-Stuff we edited:
-  interpret-statement-list
-|#
+
+;Throwing errors doesn't currently work.
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -58,7 +45,7 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Runs the main function
@@ -83,34 +70,66 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
+      [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment throw) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
 (define interpret-function-bind
   (lambda (statement environment)
-    (update (statement-type statement) (cdr statement)
+    (update (statement-type statement) (function-get-closure (cdr statement) environment)
             (insert (statement-type statement) 'novalue environment))))
 
-; Evaluates a function call
+; Gives the function everything it needs to run
+(define function-get-closure
+  (lambda (code environment)
+    (cons code environment)))
+
+; Calls on eval-function-call for calls by Mstate
+(define eval-function-call-state
+  (lambda (expr environment throw)
+    (call/cc
+     (lambda (return)
+       (eval-function-call (cdr expr) environment
+                           return
+                           (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
+                           throw)))))
+
+; Calls on eval-function-call for calls by other interpret functions
+(define eval-function-call-quick
+  (lambda (expr environment)
+    (call/cc
+     (lambda (return)
+       (eval-function-call (cdr expr) environment
+                           return
+                           (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
+                           (lambda (v env) (myerror "Uncaught exception thrown")))))))
+
+; '((((if (== a 0) (return 0) (if (== a 1) (return 1) (return (+ (funcall fib (- a 1)) (funcall fib (- a 2)))))))) (() ()))
+; ((a) (10))
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (call/cc (lambda (return)
-               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
-                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
-                                                                 (push-frame environment))
-                                              return break continue throw)))))
+    (interpret-statement-list-main (cadar (lookup-in-env (car function-list) environment))
+                                   (interpret-closure-parameters (car function-list)
+                                                                 (caar (lookup-in-env (car function-list) environment))
+                                                                 (cdr function-list)
+                                                                 (push-frame (cdr (lookup-in-env (car function-list) environment)))
+                                                                 environment
+                                                                 (lookup-in-env (car function-list) environment))
+                                   return break continue throw)))
 
-; Adds the function parameters to the frame
-(define interpret-closure
-  (lambda (function-name function-parameter-names function-parameter-values environment)
+; Adds the function parameters to the closure
+(define interpret-closure-parameters
+  (lambda (f-name f-parameter-names f-parameter-values closure environment code)
     (cond
-      [(and (null? function-parameter-names) (null? function-parameter-values)) environment]
-      [(null? function-parameter-values) (myerror "Missing input parameters at function:" function-name)]
-      [(null? function-parameter-names) (myerror "Extra input parameters at function:" function-name)]
-      [else (interpret-closure function-name (cdr function-parameter-names) (cdr function-parameter-values)
-                               (update (car function-parameter-names) (car function-parameter-values)
-                                       (insert (car function-parameter-names) 'novalue environment)))])))
+      [(and (null? f-parameter-names) (null? f-parameter-values))
+       (insert f-name code closure)]
+      [(null? f-parameter-values) (myerror "Missing input parameters at function:" f-name)]
+      [(null? f-parameter-names) (myerror "Extra input parameters at function:" f-name)]
+      [else (interpret-closure-parameters f-name (cdr f-parameter-names) (cdr f-parameter-values)
+                                          (update (car f-parameter-names) (eval-expression (car f-parameter-values) environment)
+                                                  (insert (car f-parameter-names) 'novalue closure))
+                                          environment code)])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -152,7 +171,7 @@ Stuff we edited:
 ; Mstate({ <body> }, state) = pop-frame (Mstate (<body>, pushframe(state)))
 (define interpret-block
   (lambda (statement environment return break continue throw)
-    (pop-frame (interpret-statement-list (cdr statement)
+    (pop-frame (interpret-statement-list-main (cdr statement)
                                          (push-frame environment)
                                          return
                                          (lambda (env) (break (pop-frame env)))
@@ -175,7 +194,7 @@ Stuff we edited:
       ((not (eq? 'catch (statement-type catch-statement))) (myerror "Incorrect catch statement"))
       (else (lambda (ex env)
               (jump (interpret-block finally-block
-                                     (pop-frame (interpret-statement-list 
+                                     (pop-frame (interpret-statement-list-main 
                                                  (get-body catch-statement) 
                                                  (insert (catch-var catch-statement) ex (push-frame env))
                                                  return 
@@ -216,11 +235,12 @@ Stuff we edited:
 (define eval-expression
   (lambda (expr environment)
     (cond
-      ((number? expr) expr)
-      ((eq? expr 'true) #t)
-      ((eq? expr 'false) #f)
-      ((not (list? expr)) (lookup expr environment))
-      (else (eval-operator expr environment)))))
+      [(number? expr) expr]
+      [(eq? expr 'true) #t]
+      [(eq? expr 'false) #f]
+      [(not (list? expr)) (lookup expr environment)]
+      [(eq? 'funcall (operator expr)) (eval-function-call-quick expr environment)]
+      [else (eval-operator expr environment)])))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
 ; pass the result to eval-binary-op2 to evaluate the right operand.  This forces the operands to be evaluated in the proper order in case you choose
@@ -383,7 +403,7 @@ Stuff we edited:
 (define get-value
   (lambda (n l)
     (cond
-      ((zero? n) (car l))
+      ((zero? n) (unbox (car l)))
       (else (get-value (- n 1) (cdr l))))))
 
 ; Adds a new variable/value binding pair into the environment.  Gives an error if the variable already exists in this frame.
@@ -391,7 +411,7 @@ Stuff we edited:
   (lambda (var val environment)
     (if (exists-in-list? var (variables (car environment)))
         (myerror "error: variable is being re-declared:" var)
-        (cons (add-to-frame var val (car environment)) (cdr environment)))))
+        (cons (add-to-frame var (box val) (car environment)) (cdr environment)))))
 
 ; Changes the binding of a variable to a new value in the environment.  Gives an error if the variable does not exist.
 (define update
@@ -421,7 +441,7 @@ Stuff we edited:
 (define update-in-frame-store
   (lambda (var val varlist vallist)
     (cond
-      ((eq? var (car varlist)) (cons (scheme->language val) (cdr vallist)))
+      ((eq? var (car varlist)) (begin (set-box! (car vallist) (scheme->language val)) vallist))
       (else (cons (car vallist) (update-in-frame-store var val (cdr varlist) (cdr vallist)))))))
 
 ; Returns the list of variables from a frame
@@ -462,27 +482,29 @@ Stuff we edited:
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
+
 (interpret "temp.txt")
 
+#|
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
-#|
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1
 (eq? (interpret "Tests3/Test6") 115)     ; 115
-(eq? (interpret "Tests3/Test7") #t)      ; #t
+(eq? (interpret "Tests3/Test7") 'true)   ;true
 (eq? (interpret "Tests3/Test8") 20)      ; 20
-(eq? (interpret "Tests3/Test9") 24)      ; 24
+(eq? (interpret "Tests3/Test9") 24)      ; 24 
 (eq? (interpret "Tests3/Test10") 2)      ; 2
-
 (eq? (interpret "Tests3/Test11") 35)     ; 35
-;(eq? (interpret "Tests3/Test12") )      ; ERROR
+;(interpret "Tests3/Test12")              ; ERROR
 (eq? (interpret "Tests3/Test13") 90)     ; 90
 (eq? (interpret "Tests3/Test14") 69)     ; 69
 (eq? (interpret "Tests3/Test15") 87)     ; 87
 (eq? (interpret "Tests3/Test16") 64)     ; 64
-;(eq? (interpret "Tests3/Test17") )      ; ERROR
+;(interpret "Tests3/Test17")              ; ERROR
+|#
+#|
 (eq? (interpret "Tests3/Test18") 125)    ; 125
 (eq? (interpret "Tests3/Test19") 100)    ; 100
-(eq? (interpret "Tests3/Test20") 2000400); 2000400 |#
+(eq? (interpret "Tests3/Test20") 2000400); 2000400|#

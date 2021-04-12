@@ -1,9 +1,8 @@
-; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-; ISSUES:
-; - try statements have unmonitored side effects
-; - test 20
+; Elizabeth and Justin
+; Interpreter project part3
+; Boxes are now implemented along with functions
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -21,7 +20,7 @@
                                   (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
                                   (lambda (v env) (myerror "Uncaught exception thrown"))))))))
 
-; interprets a list of statements.  The environment from each statement is used for the next ones.
+; Interprets the list of statements, if it encounters the main function it executes the code instead of just storing it
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
 (define interpret-statement-list
   (lambda (statement-list environment return break continue throw)
@@ -34,7 +33,7 @@
                                       (interpret-statement-bind (statement-type statement-list)
                                                                 environment return break continue throw) return break continue throw)])))
 
-; creates global variables and bindings
+; Creates global variables and function bindings from outside of main. This is the outer layer.
 (define interpret-statement-bind
   (lambda (statement environment return break continue throw)
     (cond
@@ -51,7 +50,7 @@
       [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
-; Runs the main function
+; Runs statements from the main function. 
 (define interpret-statement-list-main
   (lambda (statement-list environment return break continue throw)
     (cond
@@ -59,7 +58,7 @@
       [else (interpret-statement-list-main (cdr statement-list)
                                       (interpret-statement (statement-type statement-list) environment return break continue throw) return break continue throw)])))
 
-; interpret a statement in the environment with continuations for return, break, continue, throw
+; Interpret a statement in the environment from main.
 (define interpret-statement
   (lambda (statement environment return break continue throw)
     (cond
@@ -87,7 +86,7 @@
   (lambda (code environment)
     (cons code environment)))
 
-; Calls on eval-function-call with throw
+; Helper function for function call
 (define eval-function-call-state
   (lambda (expr environment throw)
     (call/cc
@@ -98,11 +97,11 @@
                            (lambda (env) (myerror "Continue used outside of loop"))
                            throw)))))
 
-; Evaluates a function call
+; Evaluates a function call. Extracts the function name, formal parametesr, parameter values, code, and closure
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
     (interpret-statement-list-main (statement-type-second (lookup-in-env (statement-type function-list) environment))
-                                   (push-frame (interpret-closure-parameters (statement-type function-list)
+                                   (push-frame(interpret-closure-parameters (statement-type function-list)
                                                                  (statement-type-first (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
                                                                  (push-frame (cdr (lookup-in-env (car function-list) environment)))
@@ -111,7 +110,7 @@
                                                                  throw))
                                    return break continue throw)))
 
-; Adds the function parameters to the closure
+; Adds the formal parameters value to the closure
 (define interpret-closure-parameters
   (lambda (f-name f-parameter-names f-parameter-values closure environment code throw)
     (cond
@@ -170,7 +169,7 @@
                                          (lambda (env) (continue (pop-frame env)))
                                          (lambda (v env) (throw v (pop-frame env)))))))
 
-; We use a continuation to throw the proper value. Because we are not using boxes, the environment/state must be thrown as well so any environment changes will be kept
+; We use a continuation to throw the proper value. BOXES
 (define interpret-throw
   (lambda (statement environment throw)
     (throw (eval-expression (get-expr statement) environment throw) environment)))
@@ -223,7 +222,7 @@
       ((not (eq? (statement-type finally-statement) 'finally)) (myerror "Incorrectly formatted finally block"))
       (else (cons 'begin (cadr finally-statement))))))
 
-; Evaluates all possible boolean and arithmetic expressions, including constants and variables.
+; Evaluates all possible boolean and arithmetic expressions, including constants, variables, and function calls
 (define eval-expression
   (lambda (expr environment throw)
     (cond
@@ -479,9 +478,11 @@
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
 
-;(interpret "temp.txt")
-
-
+;-----------------
+; TESTING
+;-----------------
+(interpret "Temp.txt")
+#|
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
@@ -493,12 +494,12 @@
 (eq? (interpret "Tests3/Test9") 24)      ; 24 
 (eq? (interpret "Tests3/Test10") 2)      ; 2
 (eq? (interpret "Tests3/Test11") 35)     ; 35
-;(interpret "Tests3/Test12")              ; ERROR
+;(interpret "Tests3/Test12")              ; ERROR: function is given too many parameters
 (eq? (interpret "Tests3/Test13") 90)     ; 90
 (eq? (interpret "Tests3/Test14") 69)     ; 69
 (eq? (interpret "Tests3/Test15") 87)     ; 87
 (eq? (interpret "Tests3/Test16") 64)     ; 64
-;(interpret "Tests3/Test17")              ; ERROR
+;(interpret "Tests3/Test17")              ; ERROR: variable outside of scope
 (eq? (interpret "Tests3/Test18") 125)    ; 125
-(eq? (interpret "Tests3/Test19") 100)    ; 100 |#
-;(eq? (interpret "Tests3/Test20") 2000400); 2000400|#
+(eq? (interpret "Tests3/Test19") 100)    ; 100
+(eq? (interpret "Tests3/Test20") 2000400); 2000400|#

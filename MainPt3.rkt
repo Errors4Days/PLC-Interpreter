@@ -1,15 +1,6 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-#|
-Stuff we added:
-  interpret-function
-  interpret-statement-list-main
-  interpret-statement-bind
-Stuff we edited:
-  interpret-statement-list
-  eval=binary-op2
-|#
 
 ; An interpreter for the simple language that uses call/cc for the continuations.  Does not handle side effects.
 (define call/cc call-with-current-continuation)
@@ -77,13 +68,18 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
+      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
 (define interpret-function-bind
   (lambda (statement environment)
-    (update (statement-type statement) (cdr statement)
+    (update (statement-type statement) (function-get-closure statement environment)
             (insert (statement-type statement) 'novalue environment))))
+
+(define function-get-closure
+  (lambda (code environment)
+    (cons (cdr code) environment))) 
 
 (define eval-function-call-quick
   (lambda (expr environment)
@@ -97,10 +93,11 @@ Stuff we edited:
 ; Evaluates a function call
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
-                                   (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
-                                                      (push-frame environment))
-                                   return break continue throw)))
+    (call/cc (lambda (return)
+               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
+                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
+                                                                 (push-frame environment))
+                                              return break continue throw)))))
 
 ; Adds the function parameters to the frame
 (define interpret-closure
@@ -393,7 +390,7 @@ Stuff we edited:
   (lambda (var val environment)
     (if (exists-in-list? var (variables (car environment)))
         (myerror "error: variable is being re-declared:" var)
-        (cons (add-to-frame var val (car environment)) (cdr environment)))))
+        (cons (add-to-frame var (box val) (car environment)) (cdr environment)))))
 
 ; Changes the binding of a variable to a new value in the environment.  Gives an error if the variable does not exist.
 (define update
@@ -471,13 +468,12 @@ Stuff we edited:
 (eq? (interpret "Tests3/Test3") 45)      ; 45
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1|#
-(eq? (interpret "Tests3/Test6") 115)     ; 115
 #|
+(eq? (interpret "Tests3/Test6") 115)     ; 115
 (eq? (interpret "Tests3/Test7") #t)      ; #t
 (eq? (interpret "Tests3/Test8") 20)      ; 20
 (eq? (interpret "Tests3/Test9") 24)      ; 24
 (eq? (interpret "Tests3/Test10") 2)      ; 2
-
 (eq? (interpret "Tests3/Test11") 35)     ; 35
 ;(eq? (interpret "Tests3/Test12") )      ; ERROR
 (eq? (interpret "Tests3/Test13") 90)     ; 90

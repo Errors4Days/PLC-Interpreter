@@ -74,13 +74,15 @@
 ; Adds a function binding to the enivronment
 (define interpret-function-bind
   (lambda (statement environment)
-    (update (statement-type statement) (cdr statement)
+    (update (statement-type statement) (function-get-closure (cdr statement) environment)
             (insert (statement-type statement) 'novalue environment))))
 
+; Gives the function everything it needs to run
 (define function-get-closure
   (lambda (code environment)
     (cons (cdr code) environment)))
 
+; Calls on eval-function-call
 (define eval-function-call-quick
   (lambda (expr environment)
     (call/cc
@@ -90,25 +92,28 @@
                            (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
                            (lambda (v env) (myerror "Uncaught exception thrown")))))))
 
-; Evaluates a function call
+; '((((if (== a 0) (return 0) (if (== a 1) (return 1) (return (+ (funcall fib (- a 1)) (funcall fib (- a 2)))))))) (() ()))
+; ((a) (10))
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (call/cc (lambda (return)
-               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
-                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
+    (interpret-statement-list-main (car (lookup-in-env (car function-list) environment))
+                                   (interpret-closure-parameters (car function-list)
+                                                                 (cadr (lookup-in-env (car function-list) environment))
+                                                                 (cdr function-list)
+                                                                 (cdr (lookup-in-env (car function-list) environment))
                                                                  (push-frame environment))
-                                              return break continue throw)))))
+                                   return break continue throw)))
 
-; Adds the function parameters to the frame
-(define interpret-closure
-  (lambda (function-name function-parameter-names function-parameter-values environment)
+; Adds the function parameters to the closure
+(define interpret-closure-parameters
+  (lambda (f-name f-parameter-names f-parameter-values closure environment)
     (cond
-      [(and (null? function-parameter-names) (null? function-parameter-values)) environment]
-      [(null? function-parameter-values) (myerror "Missing input parameters at function:" function-name)]
-      [(null? function-parameter-names) (myerror "Extra input parameters at function:" function-name)]
-      [else (interpret-closure function-name (cdr function-parameter-names) (cdr function-parameter-values)
-                               (update (car function-parameter-names) (eval-expression (car function-parameter-values) environment)
-                                       (insert (car function-parameter-names) 'novalue environment)))])))
+      [(and (null? f-parameter-names) (null? f-parameter-values)) closure]
+      [(null? f-parameter-values) (myerror "Missing input parameters at function:" f-name)]
+      [(null? f-parameter-names) (myerror "Extra input parameters at function:" f-name)]
+      [else (interpret-closure-parameters f-name (cdr f-parameter-names) (cdr f-parameter-values)
+                                          (update (car f-parameter-names) (eval-expression (car f-parameter-values) environment)
+                                                  (insert (car f-parameter-names) 'novalue closure)))])))
 
 ; Calls the return continuation with the given expression value
 (define interpret-return
@@ -461,7 +466,7 @@
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-(interpret "Tests3/Test6")
+(interpret "Tests3/Test4")
 
 #|
 (eq? (interpret "Tests3/Test1") 10)      ; 10

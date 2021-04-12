@@ -68,7 +68,8 @@
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
+      ;[(eq? 'funcall (statement-type statement)) (return statement)]
+      [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-quick statement environment) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -82,7 +83,7 @@
   (lambda (code environment)
     (cons code environment)))
 
-; Calls on eval-function-call
+; Calls on eval-function-call with input (funcall f 1 2)
 (define eval-function-call-quick
   (lambda (expr environment)
     (call/cc
@@ -100,8 +101,8 @@
                                    (interpret-closure-parameters (car function-list)
                                                                  (caar (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
-                                                                 (cdr (lookup-in-env (car function-list) environment))
-                                                                 (push-frame environment)
+                                                                 (push-frame (cdr (lookup-in-env (car function-list) environment)))
+                                                                 environment
                                                                  (lookup-in-env (car function-list) environment))
                                    return break continue throw)))
 
@@ -480,16 +481,16 @@
 (eq? (interpret "Tests3/Test6") 115)     ; 115 ;REDECLARING
 (eq? (interpret "Tests3/Test7") 'true)      ;true
 (eq? (interpret "Tests3/Test8") 20)      ; 20
-(eq? (interpret "Tests3/Test9") 24)      ; 24 |#
-#|
+(eq? (interpret "Tests3/Test9") 24)      ; 24 
 (eq? (interpret "Tests3/Test10") 2)      ; 2
 (eq? (interpret "Tests3/Test11") 35)     ; 35
 ;(eq? (interpret "Tests3/Test12") )      ; ERROR
+
 (eq? (interpret "Tests3/Test13") 90)     ; 90
 (eq? (interpret "Tests3/Test14") 69)     ; 69
 (eq? (interpret "Tests3/Test15") 87)     ; 87
 (eq? (interpret "Tests3/Test16") 64)     ; 64
 ;(eq? (interpret "Tests3/Test17") )      ; ERROR
-(eq? (interpret "Tests3/Test18") 125)    ; 125
+;(eq? (interpret "Tests3/Test18") 125)    ; 125
 (eq? (interpret "Tests3/Test19") 100)    ; 100
 (eq? (interpret "Tests3/Test20") 2000400); 2000400 |#

@@ -1,17 +1,11 @@
-var a = 10;
-var b = 20;
+function main() {
+  function h() {
+    return 10;
+  }
 
-function bmethod() {
-  var b = 30;
-  return a + b;
-}
+  function g() {
+    return 100;
+  }
 
-function cmethod() {
-  var a = 40;
-  return bmethod() + a + b;
-}
-
-function main () {
-  var b = 5;
-  return cmethod() + a + b;
+  return g() - h();
 }

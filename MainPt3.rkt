@@ -1,13 +1,6 @@
 ; Elizabeth and Justin
 #lang racket
 (require "functionParser.rkt")
-#| TODO:
-- binding function
-- get the closure
-- split the M-state parser into 2 passes:
-  1. Go through and create global variables and functions
-  2. Run main function
-|#
 #|
 Stuff we added:
   interpret-function
@@ -84,7 +77,6 @@ Stuff we edited:
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      ;[(eq? 'funcall (statement-type statement)) (eval-function-call (cdr statement) environment return break continue throw)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -105,11 +97,10 @@ Stuff we edited:
 ; Evaluates a function call
 (define eval-function-call
   (lambda (function-list environment return break continue throw)
-    (call/cc (lambda (return)
-               (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
-                                              (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
-                                                                 (push-frame environment))
-                                              return break continue throw)))))
+    (interpret-statement-list-main (cadr (lookup-in-env (car function-list) environment))
+                                   (interpret-closure (car function-list) (car (lookup-in-env (car function-list) environment)) (cdr function-list)
+                                                      (push-frame environment))
+                                   return break continue throw)))
 
 ; Adds the function parameters to the frame
 (define interpret-closure
@@ -473,15 +464,15 @@ Stuff we edited:
                             str
                             (makestr (string-append str (string-append " " (symbol->string (car vals)))) (cdr vals))))))
       (error-break (display (string-append str (makestr "" vals)))))))
-(interpret "temp.txt")
-#|
+;(interpret "temp.txt")
+
 (eq? (interpret "Tests3/Test1") 10)      ; 10
 (eq? (interpret "Tests3/Test2") 14)      ; 14
 (eq? (interpret "Tests3/Test3") 45)      ; 45
 (eq? (interpret "Tests3/Test4") 55)      ; 55
 (eq? (interpret "Tests3/Test5") 1)       ; 1|#
-#|
 (eq? (interpret "Tests3/Test6") 115)     ; 115
+#|
 (eq? (interpret "Tests3/Test7") #t)      ; #t
 (eq? (interpret "Tests3/Test8") 20)      ; 20
 (eq? (interpret "Tests3/Test9") 24)      ; 24

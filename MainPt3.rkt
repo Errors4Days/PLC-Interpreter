@@ -104,7 +104,7 @@
                                    (push-frame (interpret-closure-parameters (statement-type function-list)
                                                                  (statement-type-first (lookup-in-env (car function-list) environment))
                                                                  (cdr function-list)
-                                                                 (cdr (lookup-in-env (car function-list) environment))
+                                                                 (cdr (lookup-in-env (statement-type function-list) environment))
                                                                  environment
                                                                  (lookup-in-env (statement-type function-list) environment)
                                                                  throw))
@@ -481,7 +481,6 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Temp.txt")
 
 #|
 (eq? (interpret "Tests3/Test1") 10)      ; 10

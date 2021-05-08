@@ -13,14 +13,30 @@
 (define interpret
   (lambda (file class)
     (scheme->language
-     (run-main (parser file) class (create-class-closures class)))))
-
+     (create-class-closures (parser file) '(()())))))
      #|
      (call/cc
       (lambda (return)
         (interpret-statement-list (parser file) (newenvironment) return
                                   (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
                                   (lambda (v env) (myerror "Uncaught exception thrown"))))))))|#
+
+; '((class A () ((var x 5) (var y 10) (static-function main () ((var a (new A)) (return (+ (dot a x) (dot a y))))))))
+; ((A) ((parent) (instance vars)(method bindings)))
+(define create-class-closures
+  (lambda (code closure)
+    (create-class-closures (cdr code) (class-closure (car code) closure))))
+
+(define class-closure
+  (lambda (class closure)
+    (append (cons (cadr class) (car closure))
+            (interpret-statement-list (cadddr class) (newenvironment)
+                                                     (lambda (env) (myerror "no return"))
+                                                     (lambda (env) (myerror "Break used outside of loop"))
+                                                     (lambda (env) (myerror "Continue used outside of loop"))
+                                                     (lambda (v env) (myerror "Uncaught exception thrown"))))))
+    
+    
 
 ; Interpret class types and add it to the environment
 (define interpret-class
@@ -46,15 +62,12 @@
       [(and (pair? (car class-body)) (eq? 'main (cadar class-body))) (car class-body)]
       [else (get-main-body (cdr class-body))])))
 
-; Interprets the list of statements, if it encounters the main function it executes the code instead of just storing it
+; Takes in the body of a class and returns the appropriate bindings 
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
 (define interpret-statement-list
   (lambda (statement-list environment return break continue throw)
     (cond
       [(null? statement-list) environment]
-      [(and (eq? (statement-type-first statement-list) 'function) (eq? (statement-type-second statement-list) 'main))
-       (interpret-statement-list-main (statement-type (main-code statement-list))
-                                      (push-frame environment) return break continue throw)]
       [else (interpret-statement-list (cdr statement-list)
                                       (interpret-statement-bind (statement-type statement-list)
                                                                 environment return break continue throw) return break continue throw)])))
@@ -73,7 +86,7 @@
       [(eq? 'begin (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'throw (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'try (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
-      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Runs statements from the main function. 

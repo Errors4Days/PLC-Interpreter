@@ -11,13 +11,40 @@
 
 ; The main function.  Calls parser to get the parse tree and interprets it with a new environment.  The returned value is in the environment.
 (define interpret
-  (lambda (file)
+  (lambda (file class)
     (scheme->language
+     (run-main (parser file) class (create-class-closures class)))))
+
+     #|
      (call/cc
       (lambda (return)
         (interpret-statement-list (parser file) (newenvironment) return
                                   (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
-                                  (lambda (v env) (myerror "Uncaught exception thrown"))))))))
+                                  (lambda (v env) (myerror "Uncaught exception thrown"))))))))|#
+
+; Interpret class types and add it to the environment
+(define interpret-class
+  (lambda (class-closure environment)
+    (cond
+      [(null? class-closure) (myerror "error: no class closure")]
+      [else (insert (car class-closure) (cdr class-closure) environment)])))
+
+; Gets and runs the main function
+(define run-main
+  (lambda (args class env)
+    args))
+(define get-main-class
+  (lambda (args class)
+    (cond
+      [(null? args) (myerror "Class not found")]
+      [(eq? class (cadar args)) (get-main-body (cadddr (car args)))]
+      [else(get-main-class (cdr args) class)])))
+(define get-main-body
+  (lambda (class-body)
+    (cond
+      [(null? class-body) (myerror "Main method not found")]
+      [(and (pair? (car class-body)) (eq? 'main (cadar class-body))) (car class-body)]
+      [else (get-main-body (cdr class-body))])))
 
 ; Interprets the list of statements, if it encounters the main function it executes the code instead of just storing it
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))
@@ -480,25 +507,5 @@
 ;-----------------
 ; TESTING
 ;-----------------
-
-#|
-(eq? (interpret "Tests3/Test1") 10)      ; 10
-(eq? (interpret "Tests3/Test2") 14)      ; 14
-(eq? (interpret "Tests3/Test3") 45)      ; 45
-(eq? (interpret "Tests3/Test4") 55)      ; 55
-(eq? (interpret "Tests3/Test5") 1)       ; 1
-(eq? (interpret "Tests3/Test6") 115)     ; 115
-(eq? (interpret "Tests3/Test7") 'true)   ;true
-(eq? (interpret "Tests3/Test8") 20)      ; 20
-(eq? (interpret "Tests3/Test9") 24)      ; 24 
-(eq? (interpret "Tests3/Test10") 2)      ; 2
-(eq? (interpret "Tests3/Test11") 35)     ; 35
-;(interpret "Tests3/Test12")              ; ERROR: function is given too many parameters
-(eq? (interpret "Tests3/Test13") 90)     ; 90
-(eq? (interpret "Tests3/Test14") 69)     ; 69
-(eq? (interpret "Tests3/Test15") 87)     ; 87
-(eq? (interpret "Tests3/Test16") 64)     ; 64
-;(interpret "Tests3/Test17")              ; ERROR: variable outside of scope
-(eq? (interpret "Tests3/Test18") 125)    ; 125
-(eq? (interpret "Tests3/Test19") 100)    ; 100
-(eq? (interpret "Tests3/Test20") 2000400); 2000400|#
+(interpret "Tests4/Test1" 'A)
+; '((class A () ((var x 5) (var y 10) (static-function main () ((var a (new A)) (return (+ (dot a x) (dot a y))))))))

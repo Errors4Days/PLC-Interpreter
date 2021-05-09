@@ -40,12 +40,10 @@
                                       (lambda (env) (myerror "Continue used outside of loop"))
                                       (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
-; Interpret class types and add it to the environment
-(define interpret-class
-  (lambda (class-closure environment)
-    (cond
-      [(null? class-closure) (myerror "error: no class closure")]
-      [else (insert (car class-closure) (cdr class-closure) environment)])))
+;Creates instance and instance closure
+(define new-instance
+  (lambda (classname environment closure)
+    (get-class classname closure)))
 
 ; Gets and runs the main function
 (define run-main
@@ -142,7 +140,6 @@
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
       [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment closure)]   
       [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment throw) environment)]
-      [(eq? 'new (statement-type statement)) (myerror "help")] ; PPPPPPPPPPPPPEEEEEEEEEEENNNNNNNNNIIIIIIIIIISSSSSSSSS
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -300,7 +297,7 @@
       [(eq? expr 'false) #f]
       [(not (list? expr)) (lookup expr environment)]
       [(eq? 'funcall (operator expr)) (eval-function-call-state expr environment throw)]
-      [(eq? 'new (operator expr)) (closure)]
+      [(eq? 'new (operator expr)) (new-instance (cadr expr) environment closure)]
       [else (eval-operator expr environment throw)])))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then

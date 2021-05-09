@@ -58,10 +58,10 @@
 
 ; Gets and runs the main function
 (define run-main
-  (lambda (args class closure)
+  (lambda (args classname closure)
     (call/cc
      (lambda (return)
-       (interpret-statement-list-main (get-main-class args class) (newenvironment)
+       (interpret-statement-list-main (get-main-class args classname) (newenvironment)
                                       closure return
                                       (lambda (env) (myerror "Break used outside of loop"))
                                       (lambda (env) (myerror "Continue used outside of loop"))
@@ -133,7 +133,7 @@
     (cond
       [(null? statement-list) environment]
       [else (interpret-statement-list-main (cdr statement-list)
-                                           (interpret-statement (statement-type statement-list) closure environment return break continue throw)
+                                           (interpret-statement (statement-type statement-list) environment closure return break continue throw)
                                            closure return break continue throw)])))
 
 ; Interpret a statement in the environment from main.
@@ -310,7 +310,7 @@
       [(not (list? expr)) (lookup expr environment)]
       [(eq? 'funcall (operator expr)) (eval-function-call-state expr environment throw)]
       [(eq? 'new (operator expr)) (new-instance (cadr expr) environment closure)]
-      [else (eval-operator expr environment throw)])))
+      [else (eval-operator expr environment closure throw)])))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
 ; pass the result to eval-binary-op2 to evaluate the right operand.  This forces the operands to be evaluated in the proper order in case you choose
@@ -560,7 +560,7 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "temp.txt" 'B)
+(interpret "Tests4/Test1" 'A)
 
 #|
 (interpret "Tests4/Test1" 'A) ;15

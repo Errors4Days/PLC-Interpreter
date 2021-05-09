@@ -13,10 +13,8 @@
 (define interpret
   (lambda (file class)
     (scheme->language
-     (create-class-closures (parser file) '() ))))
-
-#|(run-main (parser file) class
-               (create-class-closures (parser file) '(()()))))))|#
+     (run-main (parser file) class
+               (create-class-closures (parser file) '(()()))))))
 
 ; Creates class closure
 (define create-class-closures
@@ -55,7 +53,7 @@
   (lambda (args class closure)
     (call/cc
      (lambda (return)
-       (interpret-statement-list-main (get-main-class args class)
+       (interpret-statement-list-main (get-main-class args class) (newenvironment)
                                       closure return
                                       (lambda (env) (myerror "Break used outside of loop"))
                                       (lambda (env) (myerror "Continue used outside of loop"))
@@ -89,8 +87,8 @@
   (lambda (statement environment return break continue throw)
     (cond
       [(eq? 'return (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
-      [(eq? 'var (statement-type statement)) (interpret-declare statement environment throw)]
-      [(eq? '= (statement-type statement)) (interpret-assign statement environment throw)]
+      [(eq? 'var (statement-type statement)) (interpret-declare statement environment '() throw)]
+      [(eq? '= (statement-type statement)) (interpret-assign statement environment '() throw)]
       [(eq? 'if (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'while (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'continue (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
@@ -104,29 +102,30 @@
 
 ; Runs statements from the main function. 
 (define interpret-statement-list-main
-  (lambda (statement-list environment return break continue throw)
+  (lambda (statement-list environment closure return break continue throw)
     (cond
       [(null? statement-list) environment]
       [else (interpret-statement-list-main (cdr statement-list)
-                                           (interpret-statement (statement-type statement-list) environment return break continue throw) return break continue throw)])))
+                                           (interpret-statement (statement-type statement-list) closure environment return break continue throw)
+                                           closure return break continue throw)])))
 
 ; Interpret a statement in the environment from main.
 (define interpret-statement
-  (lambda (statement environment return break continue throw)
+  (lambda (statement environment closure return break continue throw)
     (cond
       [(eq? 'return (statement-type statement)) (interpret-return statement environment return throw)]
-      [(eq? 'var (statement-type statement)) (interpret-declare statement environment throw)]
-      [(eq? '= (statement-type statement)) (interpret-assign statement environment throw)]
-      [(eq? 'if (statement-type statement)) (interpret-if statement environment return break continue throw)]
-      [(eq? 'while (statement-type statement)) (interpret-while statement environment return throw)]
+      [(eq? 'var (statement-type statement)) (interpret-declare statement environment closure throw)]
+      [(eq? '= (statement-type statement)) (interpret-assign statement closure environment throw)]
+      [(eq? 'if (statement-type statement)) (interpret-if statement environment closure return break continue throw)]
+      [(eq? 'while (statement-type statement)) (interpret-while statement environment closure return throw)]
       [(eq? 'continue (statement-type statement)) (continue environment)]
       [(eq? 'break (statement-type statement)) (break environment)]
       [(eq? 'begin (statement-type statement)) (interpret-block statement environment return break continue throw)]
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
-      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
+      [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment closure)]   
       [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment throw) environment)]
-      [(eq? 'new (statement-type statement)) (myerror "help")]
+      [(eq? 'new (statement-type statement)) (myerror "help")] ; PPPPPPPPPPPPPEEEEEEEEEEENNNNNNNNNIIIIIIIIIISSSSSSSSS
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -182,32 +181,32 @@
 
 ; Adds a new variable binding to the environment.  There may be an assignment with the variable
 (define interpret-declare
-  (lambda (statement environment throw)
+  (lambda (statement environment closure throw)
     (if (exists-declare-value? statement)
         (insert (get-declare-var statement) (eval-expression (get-declare-value statement) environment throw) environment)
         (insert (get-declare-var statement) 'novalue environment))))
 
 ; Updates the environment to add an new binding for a variable
 (define interpret-assign
-  (lambda (statement environment throw)
-    (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment throw) environment)))
+  (lambda (statement environment closure throw)
+    (update (get-assign-lhs statement) (eval-expression (get-assign-rhs statement) environment closure throw) environment)))
 
 ; We need to check if there is an else condition.  Otherwise, we evaluate the expression and do the right thing.
 (define interpret-if
-  (lambda (statement environment return break continue throw)
+  (lambda (statement environment closure return break continue throw)
     (cond
-      [(eval-expression (get-condition statement) environment throw) (interpret-statement (get-then statement) environment return break continue throw)]
-      [(exists-else? statement) (interpret-statement (get-else statement) environment return break continue throw)]
+      [(eval-expression (get-condition statement) environment throw) (interpret-statement (get-then statement) environment closure return break continue throw)]
+      [(exists-else? statement) (interpret-statement (get-else statement) environment closure return break continue throw)]
       [else environment])))
 
 ; Interprets a while loop.  We must create break and continue continuations for this loop
 (define interpret-while
-  (lambda (statement environment return throw)
+  (lambda (statement environment closure return throw)
     (call/cc
      (lambda (break)
        (letrec ((loop (lambda (condition body environment)
                         (if (eval-expression condition environment throw)
-                            (loop condition body (interpret-statement body environment return break (lambda (env) (break (loop condition body env))) throw))
+                            (loop condition body (interpret-statement body environment closure return break (lambda (env) (break (loop condition body env))) throw))
                             environment))))
          (loop (get-condition statement) (get-body statement) environment))))))
 
@@ -284,6 +283,7 @@
       [(eq? expr 'false) #f]
       [(not (list? expr)) (lookup expr environment)]
       [(eq? 'funcall (operator expr)) (eval-function-call-state expr environment throw)]
+      [(eq? 'new (operator expr)) (myerror "line 286")]
       [else (eval-operator expr environment throw)])))
 
 ; Evaluate a binary (or unary) operator.  Although this is not dealing with side effects, I have the routine evaluate the left operand first and then
@@ -534,8 +534,7 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Tests4/Test7" `C)
-;(interpret "Tests4/Test2" 'A)
+(interpret "Tests4/Test1" 'A)
 
 #|
 (interpret "Tests4/Test1" 'A) ;15

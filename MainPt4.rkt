@@ -15,24 +15,33 @@
     (scheme->language
      (create-class-closures (parser file) '() ))))
 
-     #|(run-main (parser file) class
+#|(run-main (parser file) class
                (create-class-closures (parser file) '(()()))))))|#
 
 ; Creates class closure
 (define create-class-closures
   (lambda (code closure)
     (cond
-      [(null? code) closure]
-      [else (create-class-closures (cdr code) (class-closure (car code) closure))])))
+      [(null? code) '()]
+      [else (append (create-class-closures (cdr code)  closure)
+                    (cons (class-closure (car code) closure) '())) ])))
+
+(define get-extends
+  (lambda (class)
+    (cond
+      [(null? (caddr class)) '()]
+      [else (cons (cdr (caddr class)) '())])))
+
 ;'((A) (((main add) (#&((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((add) (#&(((g h) ((return (+ g h)))) (() ()))))) #&(((g h) ((return (+ g h)))) (() ()))))) ())
 (define class-closure
   (lambda (class closure)
-    (cons (cons (cadr class) (caddr class))
-                (interpret-statement-list (cadddr class) (newenvironment)
-                                    (lambda (env) (myerror "no return"))
-                                    (lambda (env) (myerror "Break used outside of loop"))
-                                    (lambda (env) (myerror "Continue used outside of loop"))
-                                    (lambda (v env) (myerror "Uncaught exception thrown"))))))
+    (append (cons (cadr class)
+                  (get-extends class))
+            (interpret-statement-list (cadddr class) (newenvironment)
+                                      (lambda (env) (myerror "no return"))
+                                      (lambda (env) (myerror "Break used outside of loop"))
+                                      (lambda (env) (myerror "Continue used outside of loop"))
+                                      (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
 ; Interpret class types and add it to the environment
 (define interpret-class
@@ -45,12 +54,12 @@
 (define run-main
   (lambda (args class closure)
     (call/cc
-      (lambda (return)
-        (interpret-statement-list-main (get-main-class args class)
-                                       closure return
-                                       (lambda (env) (myerror "Break used outside of loop"))
-                                       (lambda (env) (myerror "Continue used outside of loop"))
-                                       (lambda (v env) (myerror "Uncaught exception thrown")))))))
+     (lambda (return)
+       (interpret-statement-list-main (get-main-class args class)
+                                      closure return
+                                      (lambda (env) (myerror "Break used outside of loop"))
+                                      (lambda (env) (myerror "Continue used outside of loop"))
+                                      (lambda (v env) (myerror "Uncaught exception thrown")))))))
                                 
 (define get-main-class
   (lambda (args class)
@@ -99,7 +108,7 @@
     (cond
       [(null? statement-list) environment]
       [else (interpret-statement-list-main (cdr statement-list)
-                                      (interpret-statement (statement-type statement-list) environment return break continue throw) return break continue throw)])))
+                                           (interpret-statement (statement-type statement-list) environment return break continue throw) return break continue throw)])))
 
 ; Interpret a statement in the environment from main.
 (define interpret-statement
@@ -128,7 +137,7 @@
 ; Returns a list containing the functions code and the current global variables
 (define function-get-closure
   (lambda (code environment)
-    (cons code environment)))
+    environment))
 
 ; Helper function for function call
 (define eval-function-call-state
@@ -146,12 +155,12 @@
   (lambda (function-list environment return break continue throw)
     (interpret-statement-list-main (statement-type-second (lookup-in-env (statement-type function-list) environment))
                                    (push-frame (interpret-closure-parameters (statement-type function-list)
-                                                                 (statement-type-first (lookup-in-env (car function-list) environment))
-                                                                 (cdr function-list)
-                                                                 (cdr (lookup-in-env (statement-type function-list) environment))
-                                                                 environment
-                                                                 (lookup-in-env (statement-type function-list) environment)
-                                                                 throw))
+                                                                             (statement-type-first (lookup-in-env (car function-list) environment))
+                                                                             (cdr function-list)
+                                                                             (cdr (lookup-in-env (statement-type function-list) environment))
+                                                                             environment
+                                                                             (lookup-in-env (statement-type function-list) environment)
+                                                                             throw))
                                    return break continue throw)))
 
 ; Adds the formal parameters value to the closure
@@ -199,7 +208,7 @@
        (letrec ((loop (lambda (condition body environment)
                         (if (eval-expression condition environment throw)
                             (loop condition body (interpret-statement body environment return break (lambda (env) (break (loop condition body env))) throw))
-                         environment))))
+                            environment))))
          (loop (get-condition statement) (get-body statement) environment))))))
 
 ; Interprets a block.  The break, continue, and throw continuations must be adjusted to pop the environment
@@ -207,11 +216,11 @@
 (define interpret-block
   (lambda (statement environment return break continue throw)
     (pop-frame (interpret-statement-list-main (cdr statement)
-                                         (push-frame environment)
-                                         return
-                                         (lambda (env) (break (pop-frame env)))
-                                         (lambda (env) (continue (pop-frame env)))
-                                         (lambda (v env) (throw v (pop-frame env)))))))
+                                              (push-frame environment)
+                                              return
+                                              (lambda (env) (break (pop-frame env)))
+                                              (lambda (env) (continue (pop-frame env)))
+                                              (lambda (v env) (throw v (pop-frame env)))))))
 
 ; We use a continuation to throw the proper value.
 (define interpret-throw
@@ -230,12 +239,12 @@
       (else (lambda (ex env)
               (jump (interpret-block finally-block
                                      (interpret-statement-list-main 
-                                                 (get-body catch-statement) 
-                                                 (insert (catch-var catch-statement) ex (push-frame env))
-                                                 return 
-                                                 (lambda (env2) (break (pop-frame env2))) 
-                                                 (lambda (env2) (continue (pop-frame env2))) 
-                                                 (lambda (v env2) (throw v (pop-frame env2))))
+                                      (get-body catch-statement) 
+                                      (insert (catch-var catch-statement) ex (push-frame env))
+                                      return 
+                                      (lambda (env2) (break (pop-frame env2))) 
+                                      (lambda (env2) (continue (pop-frame env2))) 
+                                      (lambda (v env2) (throw v (pop-frame env2))))
                                      return break continue throw)))))))
 
 ; To interpret a try block, we must adjust  the return, break, continue continuations to interpret the finally block if any of them are used.
@@ -525,5 +534,21 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Tests4/Test3" `C)
+(interpret "Tests4/Test7" `C)
 ;(interpret "Tests4/Test2" 'A)
+
+#|
+(interpret "Tests4/Test1" 'A) ;15
+(interpret "Tests4/Test2" 'A) ;12
+(interpret "Tests4/Test3" 'A) ;125
+(interpret "Tests4/Test4" 'A) ;36
+(interpret "Tests4/Test5" 'A) ;54
+(interpret "Tests4/Test6" 'A) ;110
+(interpret "Tests4/Test7" 'C) ;26
+(interpret "Tests4/Test8" 'Square) ;117
+(interpret "Tests4/Test9" 'Square) ;32
+(interpret "Tests4/Test10" 'List) ;15
+(interpret "Tests4/Test11" 'List) ;123456
+(interpret "Tests4/Test12" 'List) ;5285
+(interpret "Tests4/Test13" 'C) ;-716
+|#

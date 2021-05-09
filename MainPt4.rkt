@@ -11,10 +11,10 @@
 
 ; The main function.  Calls parser to get the parse tree and interprets it with a new environment.  The returned value is in the environment.
 (define interpret
-  (lambda (file class)
+  (lambda (file classname)
     (scheme->language
-     (run-main (parser file) class
-               (create-class-closures (parser file) '(()()))))))
+     (run-main (parser file) classname
+               (create-class-closures (parser file) (newenvironment))))))
 
 ; Creates class closure
 (define create-class-closures
@@ -41,9 +41,19 @@
                                       (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
 ;Creates instance and instance closure
+; environment ((A)((1 2 3)))
 (define new-instance
   (lambda (classname environment closure)
-    (get-class classname closure)))
+    (insert classname (extract-values 
+    (cadadr (get-class classname closure)) '()) (newenvironment))))
+
+; Given the closure for a class it will extract the field values
+(define extract-values
+  (lambda (classclosure values)
+    (cond
+      [(null? classclosure) values]
+      [(not(list? (unbox (car classclosure)))) (cons (box (unbox)) values)]
+      [else (cdr classclosure)])))
 
 ; Gets and runs the main function
 (define run-main

@@ -1,5 +1,9 @@
 class A {
+  var x = 5;
+  var y = 10;
+
   static function main() {
-    return 5;
+    var a = new A();
+    return 10;
   }
 }

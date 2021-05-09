@@ -41,7 +41,31 @@
                                       (lambda (env) (myerror "Continue used outside of loop"))
                                       (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
-;Creates instance and instance closure
+; Gets the correct field
+; '(((a) ((((A) ((10 5)))))))
+; '((A () ((main y x) ((() ((var a (new A)) (return (dot a x)))) 10 5))))
+(define dot-operation
+  (lambda (expr environment closure)
+    (cond
+      [(eq? (car expr) 'this) (myerror "this")]
+      [(eq? (car expr) 'super) (myerror "super")]
+      [else (get-instance-fields (car expr) (cadr expr) environment closure)])))
+; Gets the corresponding field 
+(define get-instance-fields
+  (lambda (classname varname environment closure)
+    (cond
+      [(null? environment) (myerror "Instance missing" varname)]
+      [(eq? ()]
+      [else ()]
+; Gets the 
+(define get-instance
+  (lambda (varname environment)
+    (cond
+      [(null? environment) (myerror "Instance missing" varname)]
+      [(eq? ()]
+      [else ()])))
+
+; Creates instance and instance closure
 ; environment ((A)((1 2 3)))
 (define new-instance
   (lambda (classname environment closure)
@@ -320,6 +344,7 @@
     (cond
       ((eq? '! (operator expr)) (not (eval-expression (operand1 expr) environment closure throw)))
       ((and (eq? '- (operator expr)) (= 2 (length expr))) (- (eval-expression (operand1 expr) environment closure throw)))
+      ((eq? 'dot (operator expr)) (dot-operation (cdr expr) environment closure))
       (else (eval-binary-op2 expr (eval-expression (operand1 expr) environment closure throw) environment closure throw)))))
 
 ; Complete the evaluation of the binary operator by evaluating the second operand and performing the operation.
@@ -560,7 +585,7 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Tests4/Test1" 'A)
+(interpret "temp.txt" 'A)
 
 #|
 (interpret "Tests4/Test1" 'A) ;15

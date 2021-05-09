@@ -23,13 +23,14 @@
       [(null? code) '()]
       [else (append (create-class-closures (cdr code)  closure)
                     (cons (class-closure (car code) closure) '())) ])))
-
+; Gets the parent class name from the overall closure (this is for organization)
 (define get-extends
   (lambda (class)
     (cond
       [(null? (caddr class)) (cons '() '())]
       [else (cons (cdr (caddr class)) '())])))
-
+; Creates a closure for a class in the given format:
+;(classname (parentname) ((methods/vars) (method/var definitons/values)))
 (define class-closure
   (lambda (class closure)
     (append (cons (cadr class)
@@ -45,14 +46,14 @@
 (define new-instance
   (lambda (classname environment closure)
     (insert classname (extract-values 
-    (cadadr (get-class classname closure)) '()) (newenvironment))))
+                       (cadadr (get-class classname closure)) '()) (newenvironment))))
 
 ; Given the closure for a class it will extract the field values
 (define extract-values
   (lambda (classclosure values)
     (cond
       [(null? classclosure) values]
-      [(not(list? (unbox (car classclosure)))) (cons (box (unbox)) values)]
+      [(not(list? (car classclosure))) (cons values)]
       [else (cdr classclosure)])))
 
 ; Gets and runs the main function
@@ -65,13 +66,14 @@
                                       (lambda (env) (myerror "Break used outside of loop"))
                                       (lambda (env) (myerror "Continue used outside of loop"))
                                       (lambda (v env) (myerror "Uncaught exception thrown")))))))
-                                
+; Sees if specified class contains the main method                  
 (define get-main-class
   (lambda (args class)
     (cond
       [(null? args) (myerror "Class not found")]
       [(eq? class (cadar args)) (cadddr (get-main-body (cadddr (car args))))]
-      [else(get-main-class (cdr args) class)])))
+      [else (get-main-class (cdr args) class)])))
+; Gets the main body for the specified class from the above method
 (define get-main-body
   (lambda (class-body)
     (cond
@@ -475,7 +477,7 @@
 (define get-value
   (lambda (n l)
     (cond
-      ((zero? n) (unbox (car l)))
+      ((zero? n) (car l))
       (else (get-value (- n 1) (cdr l))))))
 
 ; Adds a new variable/value binding pair into the environment.  Gives an error if the variable already exists in this frame.
@@ -483,7 +485,7 @@
   (lambda (var val environment)
     (if (exists-in-list? var (variables (car environment)))
         (myerror "error: variable is being re-declared:" var)
-        (cons (add-to-frame var (box val) (car environment)) (cdr environment)))))
+        (cons (add-to-frame var val (car environment)) (cdr environment)))))
 
 ; Changes the binding of a variable to a new value in the environment.  Gives an error if the variable does not exist.
 (define update
@@ -513,7 +515,7 @@
 (define update-in-frame-store
   (lambda (var val varlist vallist)
     (cond
-      ((eq? var (car varlist)) (begin (set-box! (car vallist) (scheme->language val)) vallist))
+      ((eq? var (car varlist)) (begin (car vallist) vallist))
       (else (cons (car vallist) (update-in-frame-store var val (cdr varlist) (cdr vallist)))))))
 
 ; Returns the list of variables from a frame
@@ -558,7 +560,7 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "temp.txt" 'A)
+(interpret "temp.txt" 'B)
 
 #|
 (interpret "Tests4/Test1" 'A) ;15

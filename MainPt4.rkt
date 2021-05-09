@@ -13,7 +13,7 @@
 (define interpret
   (lambda (file class)
     (scheme->language
-     (create-class-closures (parser file) '(()())))))
+     (create-class-closures (parser file) '() ))))
 
      #|(run-main (parser file) class
                (create-class-closures (parser file) '(()()))))))|#
@@ -27,14 +27,12 @@
 ;'((A) (((main add) (#&((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((add) (#&(((g h) ((return (+ g h)))) (() ()))))) #&(((g h) ((return (+ g h)))) (() ()))))) ())
 (define class-closure
   (lambda (class closure)
-    (cons (cons (cadr class) (car closure))
-            (cons
-             (interpret-statement-list (cadddr class) (newenvironment)
-                                                     (lambda (env) (myerror "no return"))
-                                                     (lambda (env) (myerror "Break used outside of loop"))
-                                                     (lambda (env) (myerror "Continue used outside of loop"))
-                                                     (lambda (v env) (myerror "Uncaught exception thrown")))
-             (cdr closure)))))
+    (cons (cons (cadr class) (caddr class))
+                (interpret-statement-list (cadddr class) (newenvironment)
+                                    (lambda (env) (myerror "no return"))
+                                    (lambda (env) (myerror "Break used outside of loop"))
+                                    (lambda (env) (myerror "Continue used outside of loop"))
+                                    (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
 ; Interpret class types and add it to the environment
 (define interpret-class
@@ -44,7 +42,6 @@
       [else (insert (car class-closure) (cdr class-closure) environment)])))
 
 ; Gets and runs the main function
-; '((var a (new A)) (return (+ (dot a x) (dot a y))))
 (define run-main
   (lambda (args class closure)
     (call/cc
@@ -528,5 +525,5 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Tests4/Test2" `C)
+(interpret "Tests4/Test3" `C)
 ;(interpret "Tests4/Test2" 'A)

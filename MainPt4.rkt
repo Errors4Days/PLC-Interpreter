@@ -14,29 +14,27 @@
   (lambda (file class)
     (scheme->language
      (create-class-closures (parser file) '(()())))))
-     #|
-     (call/cc
-      (lambda (return)
-        (interpret-statement-list (parser file) (newenvironment) return
-                                  (lambda (env) (myerror "Break used outside of loop")) (lambda (env) (myerror "Continue used outside of loop"))
-                                  (lambda (v env) (myerror "Uncaught exception thrown"))))))))|#
 
-; '((class A () ((var x 5) (var y 10) (static-function main () ((var a (new A)) (return (+ (dot a x) (dot a y))))))))
-; ((A) ((parent) (instance vars)(method bindings)))
+     #|(run-main (parser file) class
+               (create-class-closures (parser file) '(()()))))))|#
+
+; Creates class closure
 (define create-class-closures
   (lambda (code closure)
-    (create-class-closures (cdr code) (class-closure (car code) closure))))
-
+    (cond
+      [(null? code) closure]
+      [else (create-class-closures (cdr code) (class-closure (car code) closure))])))
+;'((A) (((main add) (#&((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((add) (#&(((g h) ((return (+ g h)))) (() ()))))) #&(((g h) ((return (+ g h)))) (() ()))))) ())
 (define class-closure
   (lambda (class closure)
-    (append (cons (cadr class) (car closure))
-            (interpret-statement-list (cadddr class) (newenvironment)
+    (cons (cons (cadr class) (car closure))
+            (cons
+             (interpret-statement-list (cadddr class) (newenvironment)
                                                      (lambda (env) (myerror "no return"))
                                                      (lambda (env) (myerror "Break used outside of loop"))
                                                      (lambda (env) (myerror "Continue used outside of loop"))
-                                                     (lambda (v env) (myerror "Uncaught exception thrown"))))))
-    
-    
+                                                     (lambda (v env) (myerror "Uncaught exception thrown")))
+             (cdr closure)))))
 
 ; Interpret class types and add it to the environment
 (define interpret-class
@@ -46,14 +44,22 @@
       [else (insert (car class-closure) (cdr class-closure) environment)])))
 
 ; Gets and runs the main function
+; '((var a (new A)) (return (+ (dot a x) (dot a y))))
 (define run-main
-  (lambda (args class env)
-    args))
+  (lambda (args class closure)
+    (call/cc
+      (lambda (return)
+        (interpret-statement-list-main (get-main-class args class)
+                                       closure return
+                                       (lambda (env) (myerror "Break used outside of loop"))
+                                       (lambda (env) (myerror "Continue used outside of loop"))
+                                       (lambda (v env) (myerror "Uncaught exception thrown")))))))
+                                
 (define get-main-class
   (lambda (args class)
     (cond
       [(null? args) (myerror "Class not found")]
-      [(eq? class (cadar args)) (get-main-body (cadddr (car args)))]
+      [(eq? class (cadar args)) (cadddr (get-main-body (cadddr (car args))))]
       [else(get-main-class (cdr args) class)])))
 (define get-main-body
   (lambda (class-body)
@@ -87,6 +93,7 @@
       [(eq? 'throw (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'try (statement-type statement)) (myerror "Cannot have statement outside a function:" (statement-type statement))]
       [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
+      [(eq? 'static-function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Runs statements from the main function. 
@@ -113,6 +120,7 @@
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
       [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment)]   
       [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment throw) environment)]
+      [(eq? 'new (statement-type statement)) (myerror "help")]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -520,5 +528,5 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "Tests4/Test1" 'A)
-; '((class A () ((var x 5) (var y 10) (static-function main () ((var a (new A)) (return (+ (dot a x) (dot a y))))))))
+(interpret "Tests4/Test2" `C)
+;(interpret "Tests4/Test2" 'A)

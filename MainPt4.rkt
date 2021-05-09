@@ -132,12 +132,12 @@
 ; Adds a function binding to the enivronment
 (define interpret-function-bind
   (lambda (statement environment)
-    (insert (statement-type statement) (function-get-closure (cdr statement) environment) environment)))
+    (insert (statement-type statement) (cdr statement) environment)))
 
 ; Returns a list containing the functions code and the current global variables
-(define function-get-closure
-  (lambda (code environment)
-    environment))
+;(define function-get-closure
+;  (lambda (code environment)
+;    code))
 
 ; Helper function for function call
 (define eval-function-call-state

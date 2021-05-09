@@ -30,7 +30,6 @@
       [(null? (caddr class)) (cons '() '())]
       [else (cons (cdr (caddr class)) '())])))
 
-;'((A) (((main add) (#&((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((add) (#&(((g h) ((return (+ g h)))) (() ()))))) #&(((g h) ((return (+ g h)))) (() ()))))) ())
 (define class-closure
   (lambda (class closure)
     (append (cons (cadr class)
@@ -71,6 +70,24 @@
       [(null? class-body) (myerror "Main method not found")]
       [(and (pair? (car class-body)) (eq? 'main (cadar class-body))) (car class-body)]
       [else (get-main-body (cdr class-body))])))
+
+; This method retrieves the parent closure
+(define get-class-parent
+  (lambda (classname closure)
+    (cond
+      [(null? closure) '()]
+      [(eq? classname (caar closure)) (cdar closure)]
+      [else (get-class classname (cdr closure))])))
+    
+; This method retrieves the closure based upon the name of the class
+; ADD/CONS PARENT CONNECTION.
+(define get-class
+  (lambda (classname closure)
+    (cond
+      [(null? closure) (myerror "Missing class: " classname)]
+      [(eq? classname (caar closure)) (cdar closure)]
+      [else (get-class classname (cdr closure))])))
+
 
 ; Takes in the body of a class and returns the appropriate bindings 
 ; Mstate (<statement><statement-list>, state) = Mstate(<statement-list>, Mstate(<statement>, state))

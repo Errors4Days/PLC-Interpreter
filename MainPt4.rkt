@@ -29,7 +29,7 @@
 (define get-extends
   (lambda (class)
     (cond
-      [(null? (caddr class)) '()]
+      [(null? (caddr class)) (cons '() '())]
       [else (cons (cdr (caddr class)) '())])))
 
 ;'((A) (((main add) (#&((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((add) (#&(((g h) ((return (+ g h)))) (() ()))))) #&(((g h) ((return (+ g h)))) (() ()))))) ())

@@ -42,8 +42,6 @@
                                       (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
 ; Gets the correct field
-; '(((a) ((((A) ((10 5)))))))
-; '((A () ((main y x) ((() ((var a (new A)) (return (dot a x)))) 10 5))))
 (define dot-operation
   (lambda (expr environment closure)
     (cond
@@ -52,7 +50,7 @@
       [(eq? (car expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
       [(eq? (car expr) 'super) (myerror "super")]
       [else (get-instance-fields (cadr expr)
-                                 (get-instance-names (cadr expr) (car expr) closure)
+                                 (get-instance-names (cadr expr) (car expr) environment closure)
                                  (get-instance-values (car expr) environment))])))
 
 (define get-instance-fields
@@ -64,8 +62,8 @@
                           
 ; Gets the list of fields from a class
 (define get-instance-names
-  (lambda (varname fieldname closure)
-    (caadr (get-class 'A closure))))
+  (lambda (varname fieldname environment closure)
+    (caadr (get-class (instance-to-class varname closure environment) closure))))
 ; Gets the instance
 (define get-instance
   (lambda (iname environment)
@@ -77,6 +75,12 @@
 (define get-instance-values
   (lambda (iname environment)
     (caadar (get-instance iname environment))))
+
+; gets the instance class name
+(define instance-to-class
+  (lambda (iname closure environment)
+    (caar (get-instance iname environment) closure)))
+  
 
 
 ; Creates instance and instance closure
@@ -189,7 +193,7 @@
       [(eq? 'throw (statement-type statement)) (interpret-throw statement environment throw)]
       [(eq? 'try (statement-type statement)) (interpret-try statement environment return break continue throw)]
       [(eq? 'function (statement-type statement)) (interpret-function-bind (cdr statement) environment closure)]   
-      [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment throw) environment)]
+      [(eq? 'funcall (statement-type statement)) (begin (eval-function-call-state statement environment closure throw) environment)]
       [else (myerror "Unknown statement:" (statement-type statement))])))
 
 ; Adds a function binding to the enivronment
@@ -197,17 +201,12 @@
   (lambda (statement environment)
     (insert (statement-type statement) (cdr statement) environment)))
 
-; Returns a list containing the functions code and the current global variables
-;(define function-get-closure
-;  (lambda (code environment)
-;    code))
-
 ; Helper function for function call
 (define eval-function-call-state
-  (lambda (expr environment throw)
+  (lambda (expr environment closure throw)
     (call/cc
      (lambda (return)
-       (eval-function-call (cdr expr) environment
+       (eval-function-call (cdr expr) environment closure
                            return
                            (lambda (env) (myerror "Break used outside of loop"))
                            (lambda (env) (myerror "Continue used outside of loop"))
@@ -215,16 +214,47 @@
 
 ; Evaluates a function call. Extracts the function name, formal parametesr, parameter values, code, and closure
 (define eval-function-call
-  (lambda (function-list environment return break continue throw)
-    (interpret-statement-list-main (statement-type-second (lookup-in-env (statement-type function-list) environment))
-                                   (push-frame (interpret-closure-parameters (statement-type function-list)
-                                                                             (statement-type-first (lookup-in-env (car function-list) environment))
-                                                                             (cdr function-list)
-                                                                             (cdr (lookup-in-env (statement-type function-list) environment))
-                                                                             environment
-                                                                             (lookup-in-env (statement-type function-list) environment)
-                                                                             throw))
-                                   return break continue throw)))
+  (lambda (function-list environment closure return break continue throw)
+    (cond
+      [(eq? 'dot (caar function-list))
+       (dot-function function-list environment closure return break continue throw)]
+      [else
+       (interpret-statement-list-main
+        (statement-type-second (lookup-in-env (statement-type function-list) environment))
+        (push-frame (interpret-closure-parameters (statement-type function-list)
+                                                  (statement-type-first (lookup-in-env (car function-list) environment))
+                                                  (cdr function-list)
+                                                  (cdr (lookup-in-env (statement-type function-list) environment))
+                                                  environment
+                                                  (lookup-in-env (statement-type function-list) environment)
+                                                  throw))
+        return break continue throw)])))
+
+; Runs a function containing the dot operator
+; expr input will be of the form '((dot a add) var1 var2)
+; sends (add var1 var2) to eval-function-call
+(define dot-function
+  (lambda (function-list environment closure return break continue throw)
+    (interpret-statement-list-main (get-function-code (cdar function-list) closure)
+                                   (push-frame (class-to-environment (cadar function-list) environment))
+                                   closure break continue throw)))
+
+(define get-function-code-helper
+  (lambda (iname fname closure)
+    (get-instance iname)))
+
+;Gets function body and parameters
+; '((() ((var a (new A)) (return (funcall (dot a add) 10 2)))) ((g h) ((return (+ g h)))))
+(define get-function-code
+  (lambda (target fnames fbodies)
+    (cond
+      [(null? fbodies) (myerror "Can't find function " fnames)]
+      [(eq? (car fnames) target) (car fbodies)]
+      [else (get-function-code target (cdr fnames) (cdr fbodies))])))
+
+(define class-to-environment
+  (lambda (iname environment)
+    environment))
 
 ; Adds the formal parameters value to the closure
 (define interpret-closure-parameters
@@ -346,7 +376,7 @@
       [(eq? expr 'true) #t]
       [(eq? expr 'false) #f]
       [(not (list? expr)) (lookup expr environment)]
-      [(eq? 'funcall (operator expr)) (eval-function-call-state expr environment throw)]
+      [(eq? 'funcall (operator expr)) (eval-function-call-state expr environment closure throw)]
       [(eq? 'new (operator expr)) (new-instance (cadr expr) environment closure)]
       [else (eval-operator expr environment closure throw)])))
 
@@ -603,6 +633,7 @@
 
 (interpret "Tests4/Test1" 'A) ;15
 (interpret "Tests4/Test2" 'A) ;12
+#|
 (interpret "Tests4/Test3" 'A) ;125
 (interpret "Tests4/Test4" 'A) ;36
 (interpret "Tests4/Test5" 'A) ;54
@@ -614,4 +645,4 @@
 (interpret "Tests4/Test11" 'List) ;123456
 (interpret "Tests4/Test12" 'List) ;5285
 (interpret "Tests4/Test13" 'C) ;-716
-
+|#

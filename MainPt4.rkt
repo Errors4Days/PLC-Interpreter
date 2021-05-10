@@ -51,11 +51,21 @@
       ;So, in the above example, expr contains '(a x)
       [(eq? (car expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
       [(eq? (car expr) 'super) (myerror "super")]
-      [else (get-instance-fields (car expr) (cadr expr) environment closure)])))
-; Gets the corresponding field from the class
+      [else (get-instance-fields (cadr expr)
+                                 (get-instance-names (cadr expr) (car expr) closure)
+                                 (get-instance-values (car expr) environment))])))
+
 (define get-instance-fields
-  (lambda (varname fieldname environment closure)
-    closure))
+  (lambda (fieldname nameslist valueslist)
+    (cond
+      [(or (null? nameslist)(null? valueslist)) (myerror "Error incorrect list of names or values")]
+      [(eq? fieldname (car nameslist)) (car valueslist)]
+      [else (get-instance-fields fieldname (cdr nameslist) (cdr valueslist))])))
+                          
+; Gets the list of fields from a class
+(define get-instance-names
+  (lambda (varname fieldname closure)
+    (caadr (get-class 'A closure))))
 ; Gets the instance
 (define get-instance
   (lambda (iname environment)
@@ -63,6 +73,10 @@
       [(null? environment) (myerror "Instance missing" iname)]
       [(eq? iname (caaar environment)) (caadar environment)]
       [else (get-instance iname (cdr environment))])))
+; Gets the instance values
+(define get-instance-values
+  (lambda (iname environment)
+    (caadar (get-instance iname environment))))
 
 
 ; Creates instance and instance closure
@@ -585,9 +599,8 @@
 ;-----------------
 ; TESTING
 ;-----------------
-(interpret "temp.txt" 'A)
 
-#|
+
 (interpret "Tests4/Test1" 'A) ;15
 (interpret "Tests4/Test2" 'A) ;12
 (interpret "Tests4/Test3" 'A) ;125
@@ -601,4 +614,4 @@
 (interpret "Tests4/Test11" 'List) ;123456
 (interpret "Tests4/Test12" 'List) ;5285
 (interpret "Tests4/Test13" 'C) ;-716
-|#
+

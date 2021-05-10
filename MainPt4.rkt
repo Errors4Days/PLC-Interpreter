@@ -47,38 +47,38 @@
 (define dot-operation
   (lambda (expr environment closure)
     (cond
-      [(eq? (car expr) 'this) (myerror "this")]
+      ;top layer of the environment should contain instance closure
+      ;So, in the above example, expr contains '(a x)
+      [(eq? (car expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
       [(eq? (car expr) 'super) (myerror "super")]
       [else (get-instance-fields (car expr) (cadr expr) environment closure)])))
-; Gets the corresponding field 
+; Gets the corresponding field from the class
 (define get-instance-fields
-  (lambda (classname varname environment closure)
-    (cond
-      [(null? environment) (myerror "Instance missing" varname)]
-      [(eq? ()]
-      [else ()]
-; Gets the 
+  (lambda (varname fieldname environment closure)
+    closure))
+; Gets the instance
 (define get-instance
-  (lambda (varname environment)
+  (lambda (iname environment)
     (cond
-      [(null? environment) (myerror "Instance missing" varname)]
-      [(eq? ()]
-      [else ()])))
+      [(null? environment) (myerror "Instance missing" iname)]
+      [(eq? iname (caaar environment)) (caadar environment)]
+      [else (get-instance iname (cdr environment))])))
+
 
 ; Creates instance and instance closure
 ; environment ((A)((1 2 3)))
 (define new-instance
   (lambda (classname environment closure)
     (insert classname (extract-values 
-                       (cadadr (get-class classname closure)) '()) (newenvironment))))
+                       (cadadr (get-class classname closure))) (newenvironment))))
 
 ; Given the closure for a class it will extract the field values
 (define extract-values
-  (lambda (classclosure values)
+  (lambda (classclosure)
     (cond
-      [(null? classclosure) values]
-      [(not(list? (car classclosure))) (cons values)]
-      [else (cdr classclosure)])))
+      [(null? classclosure) '()]
+      [(not(list? (car classclosure))) (cons (car classclosure) (extract-values (cdr classclosure)))]
+      [else (cons 'func (extract-values (cdr classclosure)))])))
 
 ; Gets and runs the main function
 (define run-main

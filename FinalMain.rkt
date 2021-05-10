@@ -21,8 +21,8 @@
   (lambda (code closure)
     (cond
       [(null? code) '()]
-      [else (append (create-class-closures (cdr code)  closure)
-                    (cons (class-closure (car code) closure) '())) ])))
+      [else (append (create-class-closures (cdr code) closure)
+                    (cons (class-closure (statement-type code) closure) '())) ])))
 ; Gets the parent class name from the overall closure (this is for organization)
 (define get-extends
   (lambda (class)
@@ -33,7 +33,7 @@
 ;(classname (parentname) ((methods/vars) (method/var definitons/values)))
 (define class-closure
   (lambda (class closure)
-    (append (cons (cadr class)
+    (append (cons (operand1 class)
                   (get-extends class))
             (interpret-statement-list (cadddr class) (newenvironment)
                                       (lambda (env) (myerror "no return"))
@@ -49,17 +49,17 @@
     (cond
       ;top layer of the environment should contain instance closure
       ;So, in the above example, expr contains '(a x)
-      [(eq? (car expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
-      [(eq? (car expr) 'super) (myerror "super")]
-      [else (get-instance-fields (cadr expr)
-                                 (get-instance-names (cadr expr) (car expr) closure)
-                                 (get-instance-values (car expr) environment))])))
+      [(eq? (statement-type expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
+      [(eq? (statement-type expr) 'super) (myerror "super")]
+      [else (get-instance-fields (operand1 expr)
+                                 (get-instance-names (operand1 expr) (statement-type expr) closure)
+                                 (get-instance-values (statement-type expr) environment))])))
 
 (define get-instance-fields
   (lambda (fieldname nameslist valueslist)
     (cond
       [(or (null? nameslist)(null? valueslist)) (myerror "Error incorrect list of names or values")]
-      [(eq? fieldname (car nameslist)) (car valueslist)]
+      [(eq? fieldname (statement-type nameslist)) (statement-type valueslist)]
       [else (get-instance-fields fieldname (cdr nameslist) (cdr valueslist))])))
                           
 ; Gets the list of fields from a class
@@ -83,7 +83,6 @@
   (lambda (iname environment)
     (caadar (get-instance iname environment))))
 
-
 ; Creates instance and instance closure
 ; environment ((A)((1 2 3)))
 (define new-instance
@@ -96,10 +95,8 @@
   (lambda (classclosure)
     (cond
       [(null? classclosure) '()]
-      [(not(list? (car classclosure))) (cons (car classclosure) (extract-values (cdr classclosure)))]
+      [(not(list? (statement-type classclosure))) (cons (statement-type classclosure) (extract-values (cdr classclosure)))]
       [else (cons 'func (extract-values (cdr classclosure)))])))
-
-
 
 ; Gets and runs the main function
 (define run-main
@@ -123,7 +120,7 @@
   (lambda (class-body)
     (cond
       [(null? class-body) (myerror "Main method not found")]
-      [(and (pair? (car class-body)) (eq? 'main (cadar class-body))) (car class-body)]
+      [(and (pair? (statement-type class-body)) (eq? 'main (cadar class-body))) (car class-body)]
       [else (get-main-body (cdr class-body))])))
 
 ; This method retrieves the parent closure

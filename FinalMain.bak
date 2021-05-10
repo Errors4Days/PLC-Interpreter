@@ -42,6 +42,8 @@
                                       (lambda (v env) (myerror "Uncaught exception thrown"))))))
 
 ; Gets the correct field
+; '(((a) ((((A) ((10 5)))))))
+; '((A () ((main y x) ((() ((var a (new A)) (return (dot a x)))) 10 5))))
 (define dot-operation
   (lambda (expr environment closure)
     (cond
@@ -50,7 +52,7 @@
       [(eq? (car expr) 'this) (myerror "this")];(get-instance-field (getselfclass (car expr)) (cdr expr) environment closure)]
       [(eq? (car expr) 'super) (myerror "super")]
       [else (get-instance-fields (cadr expr)
-                                 (get-instance-names (cadr expr) (car expr) environment closure)
+                                 (get-instance-names (cadr expr) (car expr) closure)
                                  (get-instance-values (car expr) environment))])))
 
 (define get-instance-fields
@@ -62,8 +64,8 @@
                           
 ; Gets the list of fields from a class
 (define get-instance-names
-  (lambda (varname fieldname environment closure)
-    (caadr (get-class (instance-to-class varname closure environment) closure))))
+  (lambda (varname fieldname closure)
+    (caadr (get-class 'A closure))))
 ; Gets the instance
 (define get-instance
   (lambda (iname environment)
@@ -74,13 +76,9 @@
 ; Gets the instance values
 (define get-instance-values
   (lambda (iname environment)
-    (caaar (get-instance iname environment))))
-
-; gets the instance class name
-(define instance-to-class
-  (lambda (iname closure environment)
     (caadar (get-instance iname environment))))
-  
+
+
 ; Creates instance and instance closure
 ; environment ((A)((1 2 3)))
 (define new-instance
@@ -95,6 +93,8 @@
       [(null? classclosure) '()]
       [(not(list? (car classclosure))) (cons (car classclosure) (extract-values (cdr classclosure)))]
       [else (cons 'func (extract-values (cdr classclosure)))])))
+
+
 
 ; Gets and runs the main function
 (define run-main
